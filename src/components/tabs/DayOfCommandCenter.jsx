@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { taskStatusTone } from '../../data/events.js'
 import StatusPill from '../StatusPill.jsx'
 import { InlineField, RemoveButton, AddButton } from '../fields.jsx'
-
-function toMinutes(hhmm) {
-  const [h, m] = hhmm.split(':').map(Number)
-  return h * 60 + m
-}
+import { formatTime, toMinutes, offsetFromStart } from '../../lib/records.js'
 
 export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) {
   const isLiveDay = event.status === 'Live Today'
@@ -27,6 +23,13 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
   }, [isLiveDay])
 
   const nowMinutes = clock.getHours() * 60 + clock.getMinutes()
+
+  // First item at or after the start time — everything above it is setup.
+  const startIndex = useMemo(() => {
+    if (!event.startTime) return -1
+    const start = toMinutes(event.startTime)
+    return items.findIndex((it) => toMinutes(it.time) >= start)
+  }, [items, event.startTime])
 
   const nextIndex = useMemo(() => {
     if (!isLiveDay) return -1
@@ -57,7 +60,7 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
     const last = items[items.length - 1]
     onRunOfShowChange([
       ...items,
-      { time: last ? last.time : '09:00', item: '', owner: '', status: 'Not Started' },
+      { time: last ? last.time : (event.startTime ?? '09:00'), item: '', owner: '', status: 'Not Started' },
     ])
     setEditing(true)
   }
@@ -102,11 +105,22 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
             })}
           </p>
         </div>
-        {!isLiveDay && (
-          <p className="max-w-[10rem] text-right text-xs text-ink-soft">
-            Activates automatically the morning of the event.
-          </p>
-        )}
+        <div className="text-right">
+          {event.startTime ? (
+            <p className="font-mono text-xs font-semibold text-ink">
+              Doors / start {formatTime(event.startTime)}
+            </p>
+          ) : (
+            <p className="text-xs italic text-ink-soft">
+              No start time set — add one on the event header to see prep vs. showtime.
+            </p>
+          )}
+          {!isLiveDay && (
+            <p className="mt-0.5 max-w-[11rem] text-xs text-ink-soft">
+              Activates automatically the morning of the event.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -127,6 +141,15 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
       <ol className="flex flex-col gap-2">
         {items.map((it, idx) => (
           <li key={`${it.time}-${idx}`}>
+            {!editing && startIndex === idx && (
+              <div className="my-1 flex items-center gap-2 px-1">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-[11px] font-bold uppercase tracking-wide text-ink-soft">
+                  Event starts {formatTime(event.startTime)}
+                </span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            )}
             {!editing && isLiveDay && idx === nextIndex && (
               <div className="my-1 flex items-center gap-2 px-1">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-live" />
@@ -167,8 +190,15 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
                   it.status === 'Done' ? 'opacity-60' : ''
                 }`}
               >
-                <span className="font-mono tabular w-14 shrink-0 text-base font-semibold text-ink-soft">
-                  {it.time}
+                <span className="w-14 shrink-0">
+                  <span className="font-mono tabular block text-base font-semibold text-ink-soft">
+                    {it.time}
+                  </span>
+                  {offsetFromStart(it.time, event.startTime) && (
+                    <span className="font-mono block text-[10px] text-ink-soft/70">
+                      {offsetFromStart(it.time, event.startTime)}
+                    </span>
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-base font-semibold leading-snug text-ink">

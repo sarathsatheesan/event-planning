@@ -39,8 +39,10 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
             <EditableDate
               value={event.date}
               endDate={event.endDate}
+              startTime={event.startTime}
               original={originalDate}
               onChange={(date) => onChange({ date })}
+              onTimeChange={(startTime) => onChange({ startTime })}
               onReset={onReset}
             />
           </div>

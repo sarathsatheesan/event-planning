@@ -1,4 +1,5 @@
 import { statusTone, readiness, formatDateRange } from '../data/events.js'
+import { formatTime } from '../lib/records.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 
@@ -74,6 +75,7 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
                   <div className="mt-3 flex items-center gap-2 font-mono text-xs">
                     <span className="tabular">
                       {formatDateRange(event.date, event.endDate)}
+                      {event.startTime && `, ${formatTime(event.startTime)}`}
                     </span>
                     <span className="text-border">&middot;</span>
                     <TMinusLabel dateStr={event.date} today={today} />

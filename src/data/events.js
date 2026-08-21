@@ -12,6 +12,9 @@ import { buildTemplateChecklist, TEMPLATE_CATEGORIES } from './template.js'
 /** The not-yet-planned shape shared by every event awaiting its details. */
 const shell = {
   endDate: null,
+  // When the event actually begins. Null until someone sets it — the Day-Of
+  // timeline uses it to show what is prep and what is showtime.
+  startTime: null,
   venue: null,
   lead: null,
   budget: null,
