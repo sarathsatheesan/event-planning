@@ -1,4 +1,4 @@
-import { statusTone, readiness } from '../data/events.js'
+import { statusTone, readiness, formatDateRange } from '../data/events.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 
@@ -73,11 +73,7 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
                   <p className="mt-1 text-sm text-ink-soft">{event.venue}</p>
                   <div className="mt-3 flex items-center gap-2 font-mono text-xs">
                     <span className="tabular">
-                      {new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
+                      {formatDateRange(event.date, event.endDate)}
                     </span>
                     <span className="text-border">&middot;</span>
                     <TMinusLabel dateStr={event.date} today={today} />
@@ -86,7 +82,13 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
                 </button>
                 <div className="mt-4 flex items-center justify-between border-t border-border-soft pt-3">
                   <span className="text-xs text-ink-soft">
-                    Lead: <span className="font-medium text-ink">{event.lead}</span>
+                    {event.lead ? (
+                      <>
+                        Lead: <span className="font-medium text-ink">{event.lead}</span>
+                      </>
+                    ) : (
+                      <span className="italic">No lead assigned</span>
+                    )}
                   </span>
                   <button
                     type="button"

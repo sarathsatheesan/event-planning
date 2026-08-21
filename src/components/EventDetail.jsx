@@ -37,6 +37,7 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
             <StatusPill label={event.status} tone={tone} pulse={tone === 'live'} />
             <EditableDate
               value={event.date}
+              endDate={event.endDate}
               original={originalDate}
               onChange={(date) => onChange({ date })}
               onReset={onReset}

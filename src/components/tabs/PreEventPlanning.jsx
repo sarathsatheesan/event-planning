@@ -36,6 +36,21 @@ export default function PreEventPlanning({ event }) {
 
   const doneCount = tasks.filter((t) => t.status === 'Done').length
 
+  // Most events start life as a shell with a name and a date. Say so plainly
+  // rather than rendering an empty filter bar over nothing.
+  if (tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-14 text-center">
+        <p className="font-display text-lg font-bold text-ink">No milestones yet</p>
+        <p className="max-w-md text-sm text-ink-soft">
+          {event.name} has a date but no plan behind it. Add the lead-time milestones — bookings,
+          permits, vendor confirmations, volunteer briefings — and they group here from T&minus;90
+          down to T&minus;1.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -14,7 +14,7 @@ function format(dateStr) {
  * reliably need to change — a venue moves a date, a template gets rolled to
  * next year — so it is editable in place rather than buried in a form.
  */
-export default function EditableDate({ value, original, onChange, onReset }) {
+export default function EditableDate({ value, endDate, original, onChange, onReset }) {
   const [editing, setEditing] = useState(false)
   const inputRef = useRef(null)
   const isEdited = value !== original
@@ -58,6 +58,12 @@ export default function EditableDate({ value, original, onChange, onReset }) {
         </span>
         <span className="sr-only">Change date</span>
       </button>
+      {/* Multi-day events show their span; only the start date is editable. */}
+      {endDate && (
+        <span className="font-mono text-xs text-ink-soft">
+          &ndash; {format(endDate)}
+        </span>
+      )}
       {isEdited && (
         <button
           type="button"

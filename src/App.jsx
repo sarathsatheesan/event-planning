@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { events as seedEvents } from './data/events.js'
+import { events as seedEvents, deriveStatus } from './data/events.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
 import Dashboard from './components/Dashboard.jsx'
 import EventDetail from './components/EventDetail.jsx'
 
-// Fixed "now" anchors the demo to the Summer Night Market's live window
-// (Aug 21, 2026, evening) so the Day-Of Command Center has something live to show.
-const DEMO_NOW = new Date('2026-08-21T17:45:00')
-
 export default function App() {
+  // Real wall-clock time: with a real calendar loaded, a frozen "today" would
+  // mislabel every event's status and countdown.
+  const now = new Date()
+
   const [selectedId, setSelectedId] = useState(null)
   const [toast, setToast] = useState(null)
   const [overrides, setOverrides] = useState(loadOverrides)
@@ -18,8 +18,12 @@ export default function App() {
   }, [overrides])
 
   // Seed data stays immutable; owner edits are layered on top so "reset"
-  // always has an original to fall back to.
-  const events = applyOverrides(seedEvents, overrides)
+  // always has an original to fall back to. Status is computed last, from
+  // whatever date is in effect after those edits.
+  const events = applyOverrides(seedEvents, overrides).map((e) => ({
+    ...e,
+    status: deriveStatus(e.date, e.endDate, now),
+  }))
   const selectedEvent = events.find((e) => e.id === selectedId) ?? null
   const selectedSeed = seedEvents.find((e) => e.id === selectedId) ?? null
 
@@ -53,7 +57,7 @@ export default function App() {
         <EventDetail
           event={selectedEvent}
           originalDate={selectedSeed?.date ?? selectedEvent.date}
-          today={DEMO_NOW}
+          today={now}
           onBack={() => setSelectedId(null)}
           onChange={(patch) => handleEventChange(selectedEvent.id, patch)}
           onReset={() => handleEventReset(selectedEvent.id)}
@@ -61,7 +65,7 @@ export default function App() {
       ) : (
         <Dashboard
           events={events}
-          today={DEMO_NOW}
+          today={now}
           onSelectEvent={setSelectedId}
           onCloneEvent={handleClone}
         />

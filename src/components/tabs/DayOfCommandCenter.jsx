@@ -40,6 +40,19 @@ export default function DayOfCommandCenter({ event, today }) {
     )
   }
 
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-14 text-center">
+        <p className="font-display text-lg font-bold text-ink">No run of show yet</p>
+        <p className="max-w-md text-sm text-ink-soft">
+          Build the timed schedule for {event.name} — load-in, doors, performances, close-out.
+          On the day it becomes a single-tap checklist for floor volunteers, with a live
+          &ldquo;now&rdquo; marker.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-xl">
       <div
