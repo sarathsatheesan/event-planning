@@ -2,6 +2,7 @@ import { statusTone, readiness, formatDateRange } from '../data/events.js'
 import { formatTime } from '../lib/records.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
+import EventArt from './EventArt.jsx'
 
 function daysUntil(dateStr, today) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -58,11 +59,12 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
           const tone = statusTone[event.status]
           return (
             <li key={event.id}>
-              <div className="focus-ring group flex h-full flex-col rounded-xl border border-border bg-surface p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <div className="focus-ring group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                <EventArt theme={event.theme} className="h-16 w-full shrink-0" />
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event.id)}
-                  className="focus-ring flex flex-1 flex-col text-left"
+                  className="focus-ring flex flex-1 flex-col px-5 pt-4 text-left"
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <StatusPill label={event.status} tone={tone} pulse={tone === 'live'} />
@@ -82,7 +84,7 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
                   </div>
                   <p className="mt-3 text-sm leading-snug text-ink-soft">{event.heroNote}</p>
                 </button>
-                <div className="mt-4 flex items-center justify-between border-t border-border-soft pt-3">
+                <div className="mt-4 flex items-center justify-between border-t border-border-soft px-5 py-3">
                   <span className="text-xs text-ink-soft">
                     {event.lead ? (
                       <>

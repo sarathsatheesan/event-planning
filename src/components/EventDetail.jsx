@@ -5,6 +5,7 @@ import ReadinessGauge from './ReadinessGauge.jsx'
 import EditableDate from './EditableDate.jsx'
 import { InlineField, NumberField } from './fields.jsx'
 import ExportDialog from './ExportDialog.jsx'
+import EventArt from './EventArt.jsx'
 import PreEventPlanning from './tabs/PreEventPlanning.jsx'
 import DayOfCommandCenter from './tabs/DayOfCommandCenter.jsx'
 import VendorDirectory from './tabs/VendorDirectory.jsx'
@@ -43,7 +44,9 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
         </button>
       </div>
 
-      <div className="mb-6 flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 overflow-hidden rounded-xl border border-border bg-surface">
+        <EventArt theme={event.theme} className="h-20 w-full sm:h-24" />
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2">
             <StatusPill label={event.status} tone={tone} pulse={tone === 'live'} />
@@ -107,6 +110,7 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
             <p className="text-xs text-ink-soft">budget spent</p>
           </div>
           <ReadinessGauge percent={pct} size={60} stroke={6} />
+        </div>
         </div>
       </div>
 

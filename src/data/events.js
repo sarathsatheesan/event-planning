@@ -12,6 +12,9 @@ import { buildTemplateChecklist, TEMPLATE_CATEGORIES } from './template.js'
 /** The not-yet-planned shape shared by every event awaiting its details. */
 const shell = {
   endDate: null,
+  // Drives the banner artwork — see EventArt.jsx for the palette and motif
+  // behind each key.
+  theme: 'default',
   // When the event actually begins. Null until someone sets it — the Day-Of
   // timeline uses it to show what is prep and what is showtime.
   startTime: null,
@@ -29,13 +32,13 @@ const shell = {
 
 export const events = [
   // ---- Rolled to the 2027 cycle (these dates have passed in 2026) ----
-  { ...shell, id: 'republic-day', name: 'Republic Day', date: '2027-01-31',
+  { ...shell, id: 'republic-day', theme: 'tricolour', name: 'Republic Day', date: '2027-01-31',
     checklist: buildTemplateChecklist('2027-01-31') },
-  { ...shell, id: 'magic-show', name: 'Magic Show', date: '2027-02-07',
+  { ...shell, id: 'magic-show', theme: 'magic', name: 'Magic Show', date: '2027-02-07',
     checklist: buildTemplateChecklist('2027-02-07') },
   {
     ...shell,
-    id: 'golden-era-bollywood',
+    id: 'golden-era-bollywood', theme: 'cinema',
     name: 'Golden Era of Bollywood',
     date: '2027-02-28',
     endDate: '2027-03-01',
@@ -43,49 +46,49 @@ export const events = [
   },
   {
     ...shell,
-    id: 'table-tennis',
+    id: 'table-tennis', theme: 'sport',
     name: 'Table Tennis Tournament',
     date: '2027-03-06',
     endDate: '2027-03-07',
     checklist: buildTemplateChecklist('2027-03-06'),
   },
-  { ...shell, id: 'vaadya-vaadan', name: 'Vaadya Vaadan', date: '2027-03-21',
+  { ...shell, id: 'vaadya-vaadan', theme: 'raga', name: 'Vaadya Vaadan', date: '2027-03-21',
     checklist: buildTemplateChecklist('2027-03-21') },
-  { ...shell, id: 'chaitra-utsav', name: 'Chaitra Utsav', date: '2027-04-11',
+  { ...shell, id: 'chaitra-utsav', theme: 'spring', name: 'Chaitra Utsav', date: '2027-04-11',
     checklist: buildTemplateChecklist('2027-04-11') },
   {
     ...shell,
-    id: 'tyagaraja-aradhana',
+    id: 'tyagaraja-aradhana', theme: 'classical',
     name: 'Tyagaraja Aradhana',
     date: '2027-05-08',
     endDate: '2027-05-10',
     checklist: buildTemplateChecklist('2027-05-08'),
   },
-  { ...shell, id: 'yoga-day', name: 'International Yoga Day', date: '2027-06-21',
+  { ...shell, id: 'yoga-day', theme: 'sunrise', name: 'International Yoga Day', date: '2027-06-21',
     checklist: buildTemplateChecklist('2027-06-21') },
 
   // ---- Still ahead in the 2026 cycle ----
-  { ...shell, id: 'nrityanjali', name: 'Nrityanjali', date: '2026-09-27',
+  { ...shell, id: 'nrityanjali', theme: 'dance', name: 'Nrityanjali', date: '2026-09-27',
     checklist: buildTemplateChecklist('2026-09-27') },
-  { ...shell, id: 'navratri-concert', name: 'Navratri Concert', date: '2026-10-24',
+  { ...shell, id: 'navratri-concert', theme: 'navratri', name: 'Navratri Concert', date: '2026-10-24',
     checklist: buildTemplateChecklist('2026-10-24') },
   {
     ...shell,
-    id: 'general-body-meeting',
+    id: 'general-body-meeting', theme: 'formal',
     name: 'SGHTU & ICC General Body Meeting',
     date: '2026-11-15',
     checklist: buildTemplateChecklist('2026-11-15'),
   },
-  { ...shell, id: 'volunteer-appreciation', name: 'Volunteer Appreciation Day', date: '2026-12-06',
+  { ...shell, id: 'volunteer-appreciation', theme: 'gratitude', name: 'Volunteer Appreciation Day', date: '2026-12-06',
     checklist: buildTemplateChecklist('2026-12-06') },
-  { ...shell, id: 'chess-tournament', name: 'Chess Tournament', date: '2026-12-12',
+  { ...shell, id: 'chess-tournament', theme: 'chess', name: 'Chess Tournament', date: '2026-12-12',
     checklist: buildTemplateChecklist('2026-12-12') },
 
   // ---- Held Aug 15, 2026. Kept as-is: the one event with real planning data,
   //      and the blueprint for next year's run. ----
   {
     ...shell,
-    id: 'independence-day',
+    id: 'independence-day', theme: 'tricolour',
     name: 'Independence Day Celebrations',
     date: '2026-08-15',
     venue: 'Venue to be confirmed',
