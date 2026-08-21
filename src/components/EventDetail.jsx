@@ -4,6 +4,7 @@ import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EditableDate from './EditableDate.jsx'
 import { InlineField, NumberField } from './fields.jsx'
+import ExportDialog from './ExportDialog.jsx'
 import PreEventPlanning from './tabs/PreEventPlanning.jsx'
 import DayOfCommandCenter from './tabs/DayOfCommandCenter.jsx'
 import VendorDirectory from './tabs/VendorDirectory.jsx'
@@ -19,18 +20,28 @@ const TABS = [
 export default function EventDetail({ event, originalDate, today, onBack, onChange, onReset }) {
   const defaultTab = event.status === 'Live Today' ? 'dayof' : event.status === 'Completed' ? 'wrapup' : 'preevent'
   const [tab, setTab] = useState(defaultTab)
+  const [exporting, setExporting] = useState(false)
   const pct = readiness(event)
   const tone = statusTone[event.status]
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-6 sm:px-8">
-      <button
-        type="button"
-        onClick={onBack}
-        className="focus-ring mb-4 inline-flex items-center gap-1 text-sm font-medium text-ink-soft transition hover:text-accent"
-      >
-        <span aria-hidden="true">&larr;</span> All events
-      </button>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="focus-ring inline-flex items-center gap-1 text-sm font-medium text-ink-soft transition hover:text-accent"
+        >
+          <span aria-hidden="true">&larr;</span> All events
+        </button>
+        <button
+          type="button"
+          onClick={() => setExporting(true)}
+          className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+        >
+          Export PDF
+        </button>
+      </div>
 
       <div className="mb-6 flex flex-col gap-4 rounded-xl border border-border bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -141,6 +152,8 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
           <PostEventWrapUp event={event} onRetroChange={(retro) => onChange({ retro })} />
         )}
       </div>
+
+      {exporting && <ExportDialog event={event} onClose={() => setExporting(false)} />}
     </div>
   )
 }
