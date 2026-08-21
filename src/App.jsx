@@ -42,10 +42,14 @@ export default function App() {
     setOverrides((prev) => ({ ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }))
   }
 
+  // Resets the date only. Checklist edits are real work and must survive it.
   function handleEventReset(id) {
     setOverrides((prev) => {
       const next = { ...prev }
-      delete next[id]
+      if (!next[id]) return prev
+      const { date: _date, ...rest } = next[id]
+      if (Object.keys(rest).length === 0) delete next[id]
+      else next[id] = rest
       return next
     })
     showToast('Reverted to the original date.')

@@ -92,7 +92,12 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
       </div>
 
       <div>
-        {tab === 'preevent' && <PreEventPlanning event={event} />}
+        {tab === 'preevent' && (
+          <PreEventPlanning
+            event={event}
+            onChecklistChange={(checklist) => onChange({ checklist })}
+          />
+        )}
         {tab === 'dayof' && <DayOfCommandCenter event={event} today={today} />}
         {tab === 'vendors' && <VendorDirectory event={event} />}
         {tab === 'wrapup' && <PostEventWrapUp event={event} />}

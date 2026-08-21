@@ -7,6 +7,8 @@
 // else is for the event owner to fill in. Do not invent budgets, venues, or
 // checklists — null and [] render as clear empty states asking for the real thing.
 
+import { buildTemplateChecklist, TEMPLATE_CATEGORIES } from './template.js'
+
 /** The not-yet-planned shape shared by every event awaiting its details. */
 const shell = {
   endDate: null,
@@ -16,8 +18,7 @@ const shell = {
   spent: null,
   attendanceEst: null,
   heroNote: null,
-  categories: [],
-  checklist: [],
+  categories: TEMPLATE_CATEGORIES,
   runOfShow: [],
   vendors: [],
   retro: null,
@@ -25,14 +26,17 @@ const shell = {
 
 export const events = [
   // ---- Rolled to the 2027 cycle (these dates have passed in 2026) ----
-  { ...shell, id: 'republic-day', name: 'Republic Day', date: '2027-01-31' },
-  { ...shell, id: 'magic-show', name: 'Magic Show', date: '2027-02-07' },
+  { ...shell, id: 'republic-day', name: 'Republic Day', date: '2027-01-31',
+    checklist: buildTemplateChecklist('2027-01-31') },
+  { ...shell, id: 'magic-show', name: 'Magic Show', date: '2027-02-07',
+    checklist: buildTemplateChecklist('2027-02-07') },
   {
     ...shell,
     id: 'golden-era-bollywood',
     name: 'Golden Era of Bollywood',
     date: '2027-02-28',
     endDate: '2027-03-01',
+    checklist: buildTemplateChecklist('2027-02-28'),
   },
   {
     ...shell,
@@ -40,29 +44,39 @@ export const events = [
     name: 'Table Tennis Tournament',
     date: '2027-03-06',
     endDate: '2027-03-07',
+    checklist: buildTemplateChecklist('2027-03-06'),
   },
-  { ...shell, id: 'vaadya-vaadan', name: 'Vaadya Vaadan', date: '2027-03-21' },
-  { ...shell, id: 'chaitra-utsav', name: 'Chaitra Utsav', date: '2027-04-11' },
+  { ...shell, id: 'vaadya-vaadan', name: 'Vaadya Vaadan', date: '2027-03-21',
+    checklist: buildTemplateChecklist('2027-03-21') },
+  { ...shell, id: 'chaitra-utsav', name: 'Chaitra Utsav', date: '2027-04-11',
+    checklist: buildTemplateChecklist('2027-04-11') },
   {
     ...shell,
     id: 'tyagaraja-aradhana',
     name: 'Tyagaraja Aradhana',
     date: '2027-05-08',
     endDate: '2027-05-10',
+    checklist: buildTemplateChecklist('2027-05-08'),
   },
-  { ...shell, id: 'yoga-day', name: 'International Yoga Day', date: '2027-06-21' },
+  { ...shell, id: 'yoga-day', name: 'International Yoga Day', date: '2027-06-21',
+    checklist: buildTemplateChecklist('2027-06-21') },
 
   // ---- Still ahead in the 2026 cycle ----
-  { ...shell, id: 'nrityanjali', name: 'Nrityanjali', date: '2026-09-27' },
-  { ...shell, id: 'navratri-concert', name: 'Navratri Concert', date: '2026-10-24' },
+  { ...shell, id: 'nrityanjali', name: 'Nrityanjali', date: '2026-09-27',
+    checklist: buildTemplateChecklist('2026-09-27') },
+  { ...shell, id: 'navratri-concert', name: 'Navratri Concert', date: '2026-10-24',
+    checklist: buildTemplateChecklist('2026-10-24') },
   {
     ...shell,
     id: 'general-body-meeting',
     name: 'SGHTU & ICC General Body Meeting',
     date: '2026-11-15',
+    checklist: buildTemplateChecklist('2026-11-15'),
   },
-  { ...shell, id: 'volunteer-appreciation', name: 'Volunteer Appreciation Day', date: '2026-12-06' },
-  { ...shell, id: 'chess-tournament', name: 'Chess Tournament', date: '2026-12-12' },
+  { ...shell, id: 'volunteer-appreciation', name: 'Volunteer Appreciation Day', date: '2026-12-06',
+    checklist: buildTemplateChecklist('2026-12-06') },
+  { ...shell, id: 'chess-tournament', name: 'Chess Tournament', date: '2026-12-12',
+    checklist: buildTemplateChecklist('2026-12-12') },
 
   // ---- Held Aug 15, 2026. Kept as-is: the one event with real planning data,
   //      and the blueprint for next year's run. ----
