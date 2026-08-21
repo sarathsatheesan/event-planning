@@ -1,28 +1,14 @@
 import { useMemo, useState } from 'react'
 import { taskStatusTone } from '../../data/events.js'
-import { realignDueDates } from '../../data/template.js'
+import { realignDueDates, shiftDate } from '../../data/template.js'
 import StatusPill from '../StatusPill.jsx'
+import { InlineField, InlineSelect, RemoveButton, AddButton } from '../fields.jsx'
+import { nextId } from '../../lib/records.js'
 
 const STATUS_CYCLE = ['Not Started', 'In Progress', 'Blocked', 'Done']
 const ANCHOR_ORDER = ['T-90', 'T-60', 'T-30', 'T-7', 'T-1']
+const ANCHOR_DAYS = { 'T-90': 90, 'T-60': 60, 'T-30': 30, 'T-7': 7, 'T-1': 1 }
 const UNASSIGNED = '__unassigned__'
-
-/**
- * Every checklist line is editable, so each field is a real input with a quiet
- * border — visible enough to signal "you can change this", faint enough that a
- * 23-row page still scans as a list rather than a form.
- */
-function InlineField({ value, onChange, type = 'text', placeholder, className = '' }) {
-  return (
-    <input
-      type={type}
-      value={value ?? ''}
-      placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value)}
-      className={`focus-ring rounded-md border border-border-soft bg-transparent px-1.5 py-0.5 transition hover:border-border focus:border-accent focus:bg-surface ${className}`}
-    />
-  )
-}
 
 export default function PreEventPlanning({ event, onChecklistChange }) {
   const tasks = event.checklist
@@ -68,6 +54,34 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
     onChecklistChange(tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)))
   }
 
+  function addTask(anchor) {
+    const days = ANCHOR_DAYS[anchor] ?? 30
+    onChecklistChange([
+      ...tasks,
+      {
+        id: nextId(tasks),
+        task: '',
+        // Inherit the active category filter, so a new row stays visible.
+        category: category !== 'All' ? category : (event.categories[0] ?? 'Venue'),
+        anchor,
+        assignee: owner !== 'All' && owner !== UNASSIGNED ? owner : '',
+        due: shiftDate(event.date, days),
+        status: 'Not Started',
+      },
+    ])
+  }
+
+  // Moving a milestone between phases is a rescheduling decision, so the due
+  // date follows the new anchor rather than being left stale.
+  function moveTask(id, anchor) {
+    const days = ANCHOR_DAYS[anchor]
+    patchTask(id, days == null ? { anchor } : { anchor, due: shiftDate(event.date, days) })
+  }
+
+  function removeTask(id) {
+    onChecklistChange(tasks.filter((t) => t.id !== id))
+  }
+
   function cycleStatus(id) {
     const t = tasks.find((x) => x.id === id)
     const idx = STATUS_CYCLE.indexOf(t.status)
@@ -83,6 +97,9 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
         <p className="max-w-md text-sm text-ink-soft">
           {event.name} has a date but no plan behind it.
         </p>
+        <div className="mt-2 w-64">
+          <AddButton onClick={() => addTask('T-30')}>Add the first milestone</AddButton>
+        </div>
       </div>
     )
   }
@@ -184,7 +201,13 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
                         className="w-full text-sm font-medium text-ink"
                       />
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-1 pl-1.5 text-xs text-ink-soft">
-                        <span>{t.category}</span>
+                        <InlineSelect
+                          value={t.category}
+                          onChange={(v) => patchTask(t.id, { category: v })}
+                          options={event.categories}
+                          ariaLabel="Category"
+                          className="text-xs text-ink-soft"
+                        />
                         <span aria-hidden="true">·</span>
                         <InlineField
                           value={t.assignee}
@@ -200,18 +223,32 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
                           onChange={(v) => v && patchTask(t.id, { due: v })}
                           className="font-mono text-xs text-ink-soft"
                         />
+                        <span aria-hidden="true">·</span>
+                        <InlineSelect
+                          value={t.anchor}
+                          onChange={(v) => moveTask(t.id, v)}
+                          options={ANCHOR_ORDER}
+                          ariaLabel="Move to phase"
+                          className="font-mono text-xs text-ink-soft"
+                        />
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => cycleStatus(t.id)}
-                      className="focus-ring self-start rounded-full sm:self-center"
-                    >
-                      <StatusPill label={t.status} tone={taskStatusTone[t.status]} />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1 self-start sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => cycleStatus(t.id)}
+                        className="focus-ring rounded-full"
+                      >
+                        <StatusPill label={t.status} tone={taskStatusTone[t.status]} />
+                      </button>
+                      <RemoveButton onClick={() => removeTask(t.id)} title="Remove this milestone" />
+                    </div>
                   </li>
                 ))}
               </ul>
+              <div className="mt-2">
+                <AddButton onClick={() => addTask(anchor)}>Add a {anchor} milestone</AddButton>
+              </div>
             </section>
           ))}
         </div>

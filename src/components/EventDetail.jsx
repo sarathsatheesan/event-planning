@@ -3,6 +3,7 @@ import { statusTone, readiness } from '../data/events.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EditableDate from './EditableDate.jsx'
+import { InlineField, NumberField } from './fields.jsx'
 import PreEventPlanning from './tabs/PreEventPlanning.jsx'
 import DayOfCommandCenter from './tabs/DayOfCommandCenter.jsx'
 import VendorDirectory from './tabs/VendorDirectory.jsx'
@@ -44,28 +45,54 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
             />
           </div>
           <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">{event.name}</h1>
-          {/* Real events arrive with gaps — no venue confirmed yet, no budget
-              tracked. Show what is known rather than "$0" or "undefined". */}
-          <p className="mt-1 text-sm text-ink-soft">
-            {[
-              event.venue,
-              event.lead ? `Lead: ${event.lead}` : null,
-              event.attendanceEst ? `Est. attendance ${event.attendanceEst.toLocaleString()}` : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
+          {/* Real events arrive with gaps. Rather than hiding what is missing,
+              every field is an input with a placeholder naming what belongs there. */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-ink-soft">
+            <InlineField
+              value={event.venue}
+              onChange={(v) => onChange({ venue: v || null })}
+              placeholder="Add a venue"
+              className="w-52 text-sm text-ink-soft"
+            />
+            <span aria-hidden="true">·</span>
+            <span>Lead</span>
+            <InlineField
+              value={event.lead}
+              onChange={(v) => onChange({ lead: v || null })}
+              placeholder="Unassigned"
+              className="w-32 text-sm text-ink-soft"
+            />
+            <span aria-hidden="true">·</span>
+            <span>Est. attendance</span>
+            <NumberField
+              value={event.attendanceEst}
+              onChange={(v) => onChange({ attendanceEst: v })}
+              placeholder="—"
+              className="w-20 text-sm text-ink-soft"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-4 self-start sm:self-center">
-          {event.budget != null && (
-            <div className="text-right">
-              <p className="font-mono tabular text-sm font-semibold">
-                ${(event.spent ?? 0).toLocaleString()}{' '}
-                <span className="text-ink-soft">/ ${event.budget.toLocaleString()}</span>
-              </p>
-              <p className="text-xs text-ink-soft">budget spent</p>
-            </div>
-          )}
+          <div className="text-right">
+            <p className="flex items-center gap-1 font-mono text-sm font-semibold">
+              <NumberField
+                value={event.spent}
+                onChange={(v) => onChange({ spent: v })}
+                placeholder="0"
+                prefix="$"
+                className="w-20 text-sm"
+              />
+              <span className="text-ink-soft">/</span>
+              <NumberField
+                value={event.budget}
+                onChange={(v) => onChange({ budget: v })}
+                placeholder="0"
+                prefix="$"
+                className="w-20 text-sm text-ink-soft"
+              />
+            </p>
+            <p className="text-xs text-ink-soft">budget spent</p>
+          </div>
           <ReadinessGauge percent={pct} size={60} stroke={6} />
         </div>
       </div>
@@ -98,9 +125,19 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
             onChecklistChange={(checklist) => onChange({ checklist })}
           />
         )}
-        {tab === 'dayof' && <DayOfCommandCenter event={event} today={today} />}
-        {tab === 'vendors' && <VendorDirectory event={event} />}
-        {tab === 'wrapup' && <PostEventWrapUp event={event} />}
+        {tab === 'dayof' && (
+          <DayOfCommandCenter
+            event={event}
+            today={today}
+            onRunOfShowChange={(runOfShow) => onChange({ runOfShow })}
+          />
+        )}
+        {tab === 'vendors' && (
+          <VendorDirectory event={event} onVendorsChange={(vendors) => onChange({ vendors })} />
+        )}
+        {tab === 'wrapup' && (
+          <PostEventWrapUp event={event} onRetroChange={(retro) => onChange({ retro })} />
+        )}
       </div>
     </div>
   )
