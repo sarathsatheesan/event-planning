@@ -1,4 +1,4 @@
-import { events, statusTone, readiness } from '../data/events.js'
+import { statusTone, readiness } from '../data/events.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 
@@ -15,7 +15,7 @@ function TMinusLabel({ dateStr, today }) {
   return <span className="text-ink-soft">T&minus;{n}d</span>
 }
 
-export default function Dashboard({ today, onSelectEvent, onCloneEvent }) {
+export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }) {
   const live = events.filter((e) => e.status === 'Live Today').length
   const upcoming = events.filter((e) => e.status !== 'Completed' && e.status !== 'Live Today').length
   const avgReadiness = Math.round(
@@ -28,7 +28,7 @@ export default function Dashboard({ today, onSelectEvent, onCloneEvent }) {
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
       <header className="mb-8 flex flex-col gap-1">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">
-          Cedar Hollow Parks &amp; Culture
+          India Cultural Center of Utah
         </p>
         <h1 className="font-display text-4xl font-bold leading-none sm:text-5xl">
           Annual Event Operations Hub

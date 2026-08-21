@@ -1,4 +1,4 @@
-// Seed data for Cedar Hollow Parks & Culture — EventOps
+// Seed data for India Cultural Center of Utah — EventOps
 // Dates are anchored around today (Aug 21, 2026) so the Summer Night Market
 // reads as "Live Today" and drives the Day-Of Command Center demo.
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { statusTone, readiness } from '../data/events.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
+import EditableDate from './EditableDate.jsx'
 import PreEventPlanning from './tabs/PreEventPlanning.jsx'
 import DayOfCommandCenter from './tabs/DayOfCommandCenter.jsx'
 import VendorDirectory from './tabs/VendorDirectory.jsx'
@@ -14,7 +15,7 @@ const TABS = [
   { key: 'wrapup', label: 'Post-Event Wrap-Up', phase: 'Phase 4' },
 ]
 
-export default function EventDetail({ event, today, onBack }) {
+export default function EventDetail({ event, originalDate, today, onBack, onChange, onReset }) {
   const defaultTab = event.status === 'Live Today' ? 'dayof' : event.status === 'Completed' ? 'wrapup' : 'preevent'
   const [tab, setTab] = useState(defaultTab)
   const pct = readiness(event)
@@ -34,14 +35,12 @@ export default function EventDetail({ event, today, onBack }) {
         <div>
           <div className="mb-2 flex items-center gap-2">
             <StatusPill label={event.status} tone={tone} pulse={tone === 'live'} />
-            <span className="font-mono text-xs text-ink-soft">
-              {new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
+            <EditableDate
+              value={event.date}
+              original={originalDate}
+              onChange={(date) => onChange({ date })}
+              onReset={onReset}
+            />
           </div>
           <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">{event.name}</h1>
           {/* Real events arrive with gaps — no venue confirmed yet, no budget
