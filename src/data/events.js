@@ -162,6 +162,55 @@ export const events = [
       finalReconciliation: { budget: 15000, spent: 14280, variance: 720 },
     },
   },
+  {
+    id: 'independence-day',
+    name: 'Independence Day Flag Hoisting & Run',
+    date: '2026-08-15',
+    venue: 'Venue to be confirmed',
+    status: 'Completed',
+    // Budget, attendance and event lead were never captured for this one.
+    // The UI omits each rather than showing "$0" or "undefined".
+    budget: null,
+    spent: null,
+    attendanceEst: null,
+    lead: null,
+    heroNote:
+      'Morning flag hoisting, national anthem, and a timed community run with medals and prize distribution.',
+    categories: ['Registration', 'Awards', 'Ceremony', 'Logistics'],
+    // DRAFT ANCHORS — the source list had no lead times, so each T-anchor is
+    // inferred from the nature of the task. Adjust to match how early you work.
+    checklist: [
+      { id: 1, task: 'Get the list of participants from Doug (midday)', category: 'Registration', anchor: 'T-1', assignee: 'Unassigned', due: '2026-08-14', status: 'Not Started' },
+      { id: 2, task: 'Check whether we have sticker sheets for printing QR codes', category: 'Registration', anchor: 'T-7', assignee: 'Pavithra', due: '2026-08-08', status: 'Not Started' },
+      { id: 3, task: 'Print QR codes on sticker sheets from the office printer', category: 'Registration', anchor: 'T-1', assignee: 'Unassigned', due: '2026-08-14', status: 'Not Started' },
+      { id: 4, task: 'Collect trophies from Crown Trophy', category: 'Awards', anchor: 'T-7', assignee: 'Hari', due: '2026-08-08', status: 'Not Started' },
+      { id: 5, task: 'Arrange medals and trophies at the venue', category: 'Awards', anchor: 'T-1', assignee: 'Unassigned', due: '2026-08-14', status: 'Not Started' },
+      { id: 6, task: 'Arrange T-shirts and bibs for participants, attaching stickers', category: 'Registration', anchor: 'T-1', assignee: 'Unassigned', due: '2026-08-14', status: 'Not Started' },
+      { id: 7, task: 'Place two flag poles and run a trial hoisting (Ramiah or Pai can help)', category: 'Ceremony', anchor: 'T-7', assignee: 'Unassigned', due: '2026-08-08', status: 'Not Started' },
+      { id: 8, task: 'Arrange flowers for the flag for Saturday morning', category: 'Ceremony', anchor: 'T-1', assignee: 'Unassigned', due: '2026-08-14', status: 'Not Started' },
+      { id: 9, task: 'Confirm the timing of the American flag hoisting', category: 'Ceremony', anchor: 'T-7', assignee: 'Unassigned', due: '2026-08-08', status: 'Not Started' },
+      { id: 10, task: 'Arrange singers for the national anthem', category: 'Ceremony', anchor: 'T-30', assignee: 'Chinmy', due: '2026-07-16', status: 'Not Started' },
+      { id: 11, task: 'Arrange two tents — volunteer booth (coffee/snacks) and front desk', category: 'Logistics', anchor: 'T-7', assignee: 'Unassigned', due: '2026-08-08', status: 'Not Started' },
+    ],
+    // DRAFT TIMES — the source list was untimed. The order is inferred from the
+    // tasks themselves (coffee by 07:00, hoisting, run, then medals and prizes).
+    // Three of these are purchases that probably belong in pre-event prep.
+    runOfShow: [
+      { time: '06:30', item: 'Stage water bottles at the venue', owner: 'Unassigned', status: 'Not Started' },
+      { time: '06:30', item: 'Stage snack bars and bananas for post-run distribution', owner: 'Unassigned', status: 'Not Started' },
+      { time: '07:00', item: 'Coffee ready for volunteers', owner: 'Madhavi', status: 'Done' },
+      { time: '07:00', item: 'Hand out volunteer breakfast coupons — confirm kitchen is aware', owner: 'Madhavi', status: 'Not Started' },
+      { time: '07:15', item: 'Put out bagels for volunteers', owner: 'Unassigned', status: 'Not Started' },
+      { time: '08:00', item: 'Flag hoisting (exact time to be confirmed)', owner: 'Unassigned', status: 'Not Started' },
+      { time: '09:30', item: 'Distribute snacks to runners after the run', owner: 'Unassigned', status: 'Not Started' },
+      { time: '09:45', item: 'Distribute medals to finishers', owner: 'Unassigned', status: 'Not Started' },
+      { time: '10:15', item: 'Prize distribution — gift cards and trophies', owner: 'Unassigned', status: 'Not Started' },
+    ],
+    vendors: [
+      { name: 'Crown Trophy', role: 'Trophies and medals', contact: 'Hari', phone: '—', loadIn: 'Collect before event day', balance: 0, contractUrl: '#' },
+    ],
+    retro: null,
+  },
 ]
 
 export const statusTone = {

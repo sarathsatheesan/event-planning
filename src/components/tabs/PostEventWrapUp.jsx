@@ -2,10 +2,22 @@ export default function PostEventWrapUp({ event }) {
   if (!event.retro) {
     return (
       <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-14 text-center">
-        <p className="font-display text-lg font-bold text-ink">Wrap-up not yet available</p>
+        <p className="font-display text-lg font-bold text-ink">
+          {event.status === 'Completed' ? 'Wrap-up not filled in yet' : 'Wrap-up not yet available'}
+        </p>
         <p className="max-w-sm text-sm text-ink-soft">
-          Payment reconciliation, sponsor acknowledgments, and the lessons-learned log unlock once{' '}
-          {event.name} moves to Completed.
+          {event.status === 'Completed' ? (
+            <>
+              {event.name} has finished. Add the final reconciliation, sponsor acknowledgments, and
+              what worked / what didn&apos;t, so next year starts from a blueprint rather than a
+              blank page.
+            </>
+          ) : (
+            <>
+              Payment reconciliation, sponsor acknowledgments, and the lessons-learned log unlock
+              once {event.name} moves to Completed.
+            </>
+          )}
         </p>
       </div>
     )

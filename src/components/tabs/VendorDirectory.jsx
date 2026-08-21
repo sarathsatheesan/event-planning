@@ -1,11 +1,24 @@
 export default function VendorDirectory({ event }) {
-  const outstanding = event.vendors.reduce((sum, v) => sum + v.balance, 0)
+  const vendors = event.vendors ?? []
+  const outstanding = vendors.reduce((sum, v) => sum + v.balance, 0)
+
+  if (vendors.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-14 text-center">
+        <p className="font-display text-lg font-bold text-ink">No vendors logged</p>
+        <p className="max-w-sm text-sm text-ink-soft">
+          Suppliers and resource contacts for {event.name} go here — load-in windows, phone
+          numbers, and any outstanding balances.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div>
       <div className="mb-5 flex items-center justify-between">
         <p className="text-sm text-ink-soft">
-          {event.vendors.length} vendors &amp; resource contacts for this event.
+          {vendors.length} vendors &amp; resource contacts for this event.
         </p>
         <p className="text-sm">
           <span className="text-ink-soft">Outstanding balances: </span>
@@ -16,7 +29,7 @@ export default function VendorDirectory({ event }) {
       </div>
 
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {event.vendors.map((v) => (
+        {vendors.map((v) => (
           <li
             key={v.name}
             className="flex flex-col rounded-xl border border-border bg-surface p-4"

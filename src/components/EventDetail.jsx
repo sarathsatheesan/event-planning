@@ -44,19 +44,28 @@ export default function EventDetail({ event, today, onBack }) {
             </span>
           </div>
           <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">{event.name}</h1>
+          {/* Real events arrive with gaps — no venue confirmed yet, no budget
+              tracked. Show what is known rather than "$0" or "undefined". */}
           <p className="mt-1 text-sm text-ink-soft">
-            {event.venue} &middot; Lead: {event.lead} &middot; Est. attendance{' '}
-            {event.attendanceEst.toLocaleString()}
+            {[
+              event.venue,
+              event.lead ? `Lead: ${event.lead}` : null,
+              event.attendanceEst ? `Est. attendance ${event.attendanceEst.toLocaleString()}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
         </div>
         <div className="flex items-center gap-4 self-start sm:self-center">
-          <div className="text-right">
-            <p className="font-mono tabular text-sm font-semibold">
-              ${event.spent.toLocaleString()}{' '}
-              <span className="text-ink-soft">/ ${event.budget.toLocaleString()}</span>
-            </p>
-            <p className="text-xs text-ink-soft">budget spent</p>
-          </div>
+          {event.budget != null && (
+            <div className="text-right">
+              <p className="font-mono tabular text-sm font-semibold">
+                ${(event.spent ?? 0).toLocaleString()}{' '}
+                <span className="text-ink-soft">/ ${event.budget.toLocaleString()}</span>
+              </p>
+              <p className="text-xs text-ink-soft">budget spent</p>
+            </div>
+          )}
           <ReadinessGauge percent={pct} size={60} stroke={6} />
         </div>
       </div>

@@ -26,10 +26,13 @@ export default function DayOfCommandCenter({ event, today }) {
     return idx === -1 ? items.length : idx
   }, [items, nowMinutes, isLiveDay])
 
-  function cycleStatus(time) {
+  // Keyed by position, not by time: a real run of show routinely has two things
+  // happening at once (water and snacks both staged at 06:30), and matching on
+  // time would advance every item sharing that slot.
+  function cycleStatus(index) {
     setItems((prev) =>
-      prev.map((it) => {
-        if (it.time !== time) return it
+      prev.map((it, i) => {
+        if (i !== index) return it
         const order = ['Not Started', 'In Progress', 'Done']
         const idx = order.indexOf(it.status)
         return { ...it, status: order[(idx + 1) % order.length] }
@@ -69,7 +72,7 @@ export default function DayOfCommandCenter({ event, today }) {
       <ol className="flex flex-col gap-2">
         {items.map((it, idx) => {
           return (
-            <li key={it.time}>
+            <li key={`${it.time}-${idx}`}>
               {isLiveDay && idx === nextIndex && (
                 <div className="my-1 flex items-center gap-2 px-1">
                   <span className="h-2 w-2 shrink-0 rounded-full bg-live" />
@@ -79,7 +82,7 @@ export default function DayOfCommandCenter({ event, today }) {
               )}
               <button
                 type="button"
-                onClick={() => cycleStatus(it.time)}
+                onClick={() => cycleStatus(idx)}
                 className={`focus-ring flex w-full items-center gap-4 rounded-xl border px-4 py-4 text-left transition ${
                   it.status === 'Done' ? 'opacity-60' : ''
                 }`}
