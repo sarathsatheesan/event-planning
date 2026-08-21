@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react'
 import { taskStatusTone } from '../../data/events.js'
-import { realignDueDates, shiftDate } from '../../data/template.js'
+import { realignDueDates, shiftDate, ANCHOR_ORDER, ANCHOR_DAYS } from '../../data/template.js'
 import StatusPill from '../StatusPill.jsx'
 import { InlineField, InlineSelect, RemoveButton, AddButton } from '../fields.jsx'
 import { nextId } from '../../lib/records.js'
 
 const STATUS_CYCLE = ['Not Started', 'In Progress', 'Blocked', 'Done']
-const ANCHOR_ORDER = ['T-90', 'T-60', 'T-30', 'T-7', 'T-1']
-const ANCHOR_DAYS = { 'T-90': 90, 'T-60': 60, 'T-30': 30, 'T-7': 7, 'T-1': 1 }
 const UNASSIGNED = '__unassigned__'
 
 export default function PreEventPlanning({ event, onChecklistChange }) {

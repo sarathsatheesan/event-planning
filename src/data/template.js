@@ -9,6 +9,18 @@
 // events with genuinely different needs (a tournament, a general body meeting)
 // are expected to prune it.
 
+/**
+ * Lead-time phases. T-21/T-14/T-3/T-2 were added when the India Mela sheet
+ * arrived with real lead times that the coarse T-90/60/30/7/1 set could not
+ * hold without rounding a three-week task into a one-month slot.
+ */
+export const ANCHOR_ORDER = ['T-90', 'T-60', 'T-30', 'T-21', 'T-14', 'T-7', 'T-3', 'T-2', 'T-1']
+
+export const ANCHOR_DAYS = {
+  'T-90': 90, 'T-60': 60, 'T-30': 30, 'T-21': 21, 'T-14': 14,
+  'T-7': 7, 'T-3': 3, 'T-2': 2, 'T-1': 1,
+}
+
 export const TEMPLATE_CATEGORIES = [
   'Venue',
   'Artists',
@@ -77,8 +89,7 @@ export function buildTemplateChecklist(eventDate) {
 /** Re-space existing tasks against a (possibly new) event date, keeping every
  *  edit the owner has made. Used when an event moves. */
 export function realignDueDates(checklist, eventDate) {
-  const daysFor = Object.fromEntries(TEMPLATE.map(([anchor, days]) => [anchor, days]))
   return checklist.map((t) =>
-    daysFor[t.anchor] == null ? t : { ...t, due: shiftDate(eventDate, daysFor[t.anchor]) }
+    ANCHOR_DAYS[t.anchor] == null ? t : { ...t, due: shiftDate(eventDate, ANCHOR_DAYS[t.anchor]) }
   )
 }

@@ -37,6 +37,8 @@ const THEMES = {
   gratitude: { from: '#BE123C', to: '#F59E0B', motif: 'rays', ink: '#FFE4E6' },
   // Chess — charcoal and brass, checkerboard.
   chess: { from: '#1F2937', to: '#78716C', motif: 'checker', ink: '#FCD34D' },
+  // India Mela — the biggest day of the year, marigold into festival pink.
+  mela: { from: '#EA580C', to: '#DB2777', motif: 'petals', ink: '#FEF3C7' },
   // Anything unthemed.
   default: { from: '#334155', to: '#2F5FED', motif: 'grid', ink: '#E2E8F0' },
 }
