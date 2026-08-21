@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+/* ---- Design tokens: light (default) ---- */
+:root {
+  --ink: #12151c;
+  --ink-soft: #454b57;
+  --paper: #f3f4f7;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #dde0e7;
+  --border-soft: #e8eaf0;
+
+  --accent: #2f5fed;
+  --accent-ink: #ffffff;
+  --accent-soft: #e8edfe;
+
+  --live: #f5a623;
+  --live-soft: #fef3de;
+
+  --success: #1e8e5a;
+  --success-soft: #e3f5ec;
+  --warning: #b7791f;
+  --warning-soft: #fbf0da;
+  --critical: #d1372f;
+  --critical-soft: #fbe6e4;
+  --neutral-status: #64748b;
+  --neutral-status-soft: #eef1f5;
+
+  --shadow-color: 220 30% 15%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #eef0f4;
+    --ink-soft: #a7adba;
+    --paper: #10131a;
+    --surface: #171b24;
+    --surface-raised: #1d222c;
+    --border: #2a2f3b;
+    --border-soft: #232833;
+
+    --accent: #6d8dff;
+    --accent-ink: #0b1020;
+    --accent-soft: #1c2440;
+
+    --live: #f6b445;
+    --live-soft: #3a2b0f;
+
+    --success: #43c48a;
+    --success-soft: #12291f;
+    --warning: #e3ab4c;
+    --warning-soft: #2f2510;
+    --critical: #f0685f;
+    --critical-soft: #33191a;
+    --neutral-status: #8a93a6;
+    --neutral-status-soft: #1c212c;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #eef0f4;
+  --ink-soft: #a7adba;
+  --paper: #10131a;
+  --surface: #171b24;
+  --surface-raised: #1d222c;
+  --border: #2a2f3b;
+  --border-soft: #232833;
+
+  --accent: #6d8dff;
+  --accent-ink: #0b1020;
+  --accent-soft: #1c2440;
+
+  --live: #f6b445;
+  --live-soft: #3a2b0f;
+
+  --success: #43c48a;
+  --success-soft: #12291f;
+  --warning: #e3ab4c;
+  --warning-soft: #2f2510;
+  --critical: #f0685f;
+  --critical-soft: #33191a;
+  --neutral-status: #8a93a6;
+  --neutral-status-soft: #1c212c;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-live: var(--live);
+  --color-live-soft: var(--live-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+  --color-neutral-status: var(--neutral-status);
+  --color-neutral-status-soft: var(--neutral-status-soft);
+
+  --font-display: 'Big Shoulders Display', 'Oswald', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-display {
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
