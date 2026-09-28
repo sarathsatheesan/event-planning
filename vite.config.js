@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// GitHub Pages serves a project site from https://<user>.github.io/<repo>/,
-// so production assets need that sub-path as their base. The deploy workflow
-// sets BASE_PATH from the repo name; local dev and preview stay at '/'.
+// Firebase Hosting serves the app at the root of icceventops.web.app, so no
+// sub-path prefix is needed. (GitHub Pages served it from /event-planning/,
+// which is why this used to read BASE_PATH from the Actions workflow.)
 // https://vite.dev/config/
-export default defineConfig(({ command }) => ({
+export default defineConfig({
   plugins: [react()],
-  base: command === 'build' ? process.env.BASE_PATH || '/' : '/',
-}))
+  base: '/',
+})

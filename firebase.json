@@ -1,0 +1,27 @@
+{
+  "hosting": {
+    "site": "icceventops",
+    "public": "dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+
+    "headers": [
+      {
+        "comment": "Vite fingerprints these filenames, so a given URL's contents never change. Cache them hard.",
+        "source": "/assets/**",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      },
+      {
+        "comment": "index.html points at the fingerprinted bundles, so it must never be cached. This is the fix for the stale-page problem GitHub Pages kept causing: a plain reload picks up each deploy immediately, with no hard refresh.",
+        "source": "/index.html",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }]
+      }
+    ]
+  }
+}

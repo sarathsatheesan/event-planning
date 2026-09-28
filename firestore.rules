@@ -1,0 +1,39 @@
+rules_version = '2';
+
+// Firestore security rules for ICC EventOps.
+//
+// This is the only thing standing between committee data and the open internet:
+// the app is published on GitHub Pages, so anyone can find the URL, and the
+// Firebase web config in the bundle is public by design. Rules run on Google's
+// servers and cannot be bypassed by editing the page.
+//
+// Paste into Firebase console -> Firestore Database -> Rules -> Publish.
+// Keep this list identical to COMMITTEE_EMAILS in src/lib/firebaseConfig.js.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isCommittee() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in [
+             'utahindiacc@gmail.com',
+             'sarath.s1884@gmail.com'
+             // add each committee member's Google address here, lower-case
+           ];
+    }
+
+    match /eventOverrides/{eventId} {
+      // Signing in is required to read as well as write. Swap this line for
+      // `allow read: if true;` only if the committee decides the calendar
+      // should be publicly viewable.
+      allow read: if isCommittee();
+      allow write: if isCommittee();
+    }
+
+    // Anything not matched above is denied. Do not add a catch-all.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

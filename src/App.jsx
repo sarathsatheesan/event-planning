@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { events as seedEvents, deriveStatus } from './data/events.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
+import { isFirebaseConfigured } from './lib/firebaseConfig.js'
+import { watchAuth, watchOverrides, saveOverride, deleteOverride, canEdit, signIn, signOutUser } from './lib/firebase.js'
 import Dashboard from './components/Dashboard.jsx'
 import EventDetail from './components/EventDetail.jsx'
+import AuthBar from './components/AuthBar.jsx'
+
+// Inline fields fire on every keystroke. Writing each one straight to Firestore
+// would be both slow and expensive, so writes are coalesced per event.
+const WRITE_DEBOUNCE_MS = 800
 
 export default function App() {
   // Real wall-clock time: with a real calendar loaded, a frozen "today" would
@@ -12,10 +19,67 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [toast, setToast] = useState(null)
   const [overrides, setOverrides] = useState(loadOverrides)
+  const [user, setUser] = useState(null)
+  const [authBusy, setAuthBusy] = useState(false)
+
+  const toastTimer = useRef(null)
+  const showToast = useCallback((message) => {
+    setToast(message)
+    window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 3600)
+  }, [])
+
+  const allowed = canEdit(user)
+  // Cloud mode means edits are shared. Anyone else — signed out, or signed in
+  // but not on the committee list — keeps working against their own browser.
+  const cloud = isFirebaseConfigured && allowed
+  const pendingWrites = useRef(new Map())
 
   useEffect(() => {
-    saveOverrides(overrides)
-  }, [overrides])
+    if (!isFirebaseConfigured) return
+    let unsub = () => {}
+    watchAuth(setUser).then((fn) => {
+      unsub = fn
+    })
+    return () => unsub()
+  }, [])
+
+  // Live subscription, so two committee members editing at once see each other.
+  useEffect(() => {
+    if (!cloud) return
+    let unsub = () => {}
+    watchOverrides(setOverrides, (err) => showToast(`Could not reach the database: ${err.message}`))
+      .then((fn) => {
+        unsub = fn
+      })
+    return () => unsub()
+  }, [cloud, showToast])
+
+  // Local mode keeps its own copy; cloud mode is authoritative from Firestore.
+  useEffect(() => {
+    if (!cloud) saveOverrides(overrides)
+  }, [overrides, cloud])
+
+  useEffect(() => {
+    const timers = pendingWrites.current
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t))
+      window.clearTimeout(toastTimer.current)
+    }
+  }, [])
+
+  function queueWrite(id, data) {
+    const timers = pendingWrites.current
+    window.clearTimeout(timers.get(id))
+    timers.set(
+      id,
+      window.setTimeout(() => {
+        timers.delete(id)
+        const write = data === null ? deleteOverride(id) : saveOverride(id, data)
+        write.catch((err) => showToast(`Save failed: ${err.message}`))
+      }, WRITE_DEBOUNCE_MS)
+    )
+  }
 
   // Seed data stays immutable; owner edits are layered on top so "reset"
   // always has an original to fall back to. Status is computed last, from
@@ -27,36 +91,54 @@ export default function App() {
   const selectedEvent = events.find((e) => e.id === selectedId) ?? null
   const selectedSeed = seedEvents.find((e) => e.id === selectedId) ?? null
 
-  function showToast(message) {
-    setToast(message)
-    window.clearTimeout(showToast._t)
-    showToast._t = window.setTimeout(() => setToast(null), 3200)
-  }
-
   function handleClone(id) {
     const src = events.find((e) => e.id === id)
     showToast(`"${src.name}" cloned into a new draft for next year's cycle.`)
   }
 
   function handleEventChange(id, patch) {
-    setOverrides((prev) => ({ ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }))
+    setOverrides((prev) => {
+      const next = { ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }
+      if (cloud) queueWrite(id, next[id])
+      return next
+    })
   }
 
   // Resets the date only. Checklist edits are real work and must survive it.
   function handleEventReset(id) {
     setOverrides((prev) => {
+      if (!prev[id]) return prev
       const next = { ...prev }
-      if (!next[id]) return prev
       const { date: _date, ...rest } = next[id]
       if (Object.keys(rest).length === 0) delete next[id]
       else next[id] = rest
+      if (cloud) queueWrite(id, next[id] ?? null)
       return next
     })
     showToast('Reverted to the original date.')
   }
 
+  async function handleAuth(action) {
+    setAuthBusy(true)
+    try {
+      await action()
+    } catch (err) {
+      showToast(err?.message ?? 'Sign-in failed.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-paper">
+      <AuthBar
+        user={user}
+        allowed={allowed}
+        busy={authBusy}
+        onSignIn={() => handleAuth(signIn)}
+        onSignOut={() => handleAuth(signOutUser)}
+      />
+
       {selectedEvent ? (
         <EventDetail
           event={selectedEvent}
