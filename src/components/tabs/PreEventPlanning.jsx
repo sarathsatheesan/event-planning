@@ -4,11 +4,13 @@ import { realignDueDates, shiftDate, ANCHOR_ORDER, ANCHOR_DAYS } from '../../dat
 import StatusPill from '../StatusPill.jsx'
 import { InlineField, InlineSelect, RemoveButton, AddButton } from '../fields.jsx'
 import { nextId } from '../../lib/records.js'
+import { useEditable } from '../../lib/editing.js'
 
 const STATUS_CYCLE = ['Not Started', 'In Progress', 'Blocked', 'Done']
 const UNASSIGNED = '__unassigned__'
 
 export default function PreEventPlanning({ event, onChecklistChange }) {
+  const editable = useEditable()
   const tasks = event.checklist
   const [category, setCategory] = useState('All')
   const [owner, setOwner] = useState('All')
@@ -148,19 +150,23 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
 
           {/* Due dates hang off the event date. If the event moves, this
               re-spaces them without touching any other edit. */}
-          <button
-            type="button"
-            onClick={() => onChecklistChange(realignDueDates(tasks, event.date))}
-            title="Recalculate every due date from the event date, keeping your other edits"
-            className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-          >
-            Realign due dates
-          </button>
+          {editable && (
+            <button
+              type="button"
+              onClick={() => onChecklistChange(realignDueDates(tasks, event.date))}
+              title="Recalculate every due date from the event date, keeping your other edits"
+              className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+            >
+              Realign due dates
+            </button>
+          )}
 
           <p className="text-xs text-ink-soft">
-            {filtered.length === tasks.length
+            {filtered.length !== tasks.length
+              ? `Showing ${filtered.length} of ${tasks.length}.`
+              : editable
               ? 'Click any field to edit it.'
-              : `Showing ${filtered.length} of ${tasks.length}.`}
+              : 'Sign in as a committee member to make changes.'}
           </p>
         </div>
       </div>
@@ -232,13 +238,17 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-1 self-start sm:self-center">
-                      <button
-                        type="button"
-                        onClick={() => cycleStatus(t.id)}
-                        className="focus-ring rounded-full"
-                      >
+                      {editable ? (
+                        <button
+                          type="button"
+                          onClick={() => cycleStatus(t.id)}
+                          className="focus-ring rounded-full"
+                        >
+                          <StatusPill label={t.status} tone={taskStatusTone[t.status]} />
+                        </button>
+                      ) : (
                         <StatusPill label={t.status} tone={taskStatusTone[t.status]} />
-                      </button>
+                      )}
                       <RemoveButton onClick={() => removeTask(t.id)} title="Remove this milestone" />
                     </div>
                   </li>

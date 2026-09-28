@@ -3,6 +3,7 @@ import { formatTime } from '../lib/records.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EventArt from './EventArt.jsx'
+import { useEditable } from '../lib/editing.js'
 
 function daysUntil(dateStr, today) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -18,6 +19,7 @@ function TMinusLabel({ dateStr, today }) {
 }
 
 export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }) {
+  const editable = useEditable()
   const live = events.filter((e) => e.status === 'Live Today').length
   const upcoming = events.filter((e) => e.status !== 'Completed' && e.status !== 'Live Today').length
   const avgReadiness = Math.round(
@@ -94,13 +96,15 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
                       <span className="italic">No lead assigned</span>
                     )}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => onCloneEvent(event.id)}
-                    className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-                  >
-                    Clone as template
-                  </button>
+                  {editable && (
+                    <button
+                      type="button"
+                      onClick={() => onCloneEvent(event.id)}
+                      className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+                    >
+                      Clone as template
+                    </button>
+                  )}
                 </div>
               </div>
             </li>

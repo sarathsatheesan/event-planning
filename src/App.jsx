@@ -2,14 +2,26 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { events as seedEvents, deriveStatus } from './data/events.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
 import { isFirebaseConfigured } from './lib/firebaseConfig.js'
-import { watchAuth, watchOverrides, saveOverride, deleteOverride, canEdit, signIn, signOutUser } from './lib/firebase.js'
+import {
+  watchAuth,
+  watchOverrides,
+  saveOverride,
+  deleteOverride,
+  canEdit,
+  signIn,
+  signOutUser,
+} from './lib/firebase.js'
 import Dashboard from './components/Dashboard.jsx'
 import EventDetail from './components/EventDetail.jsx'
 import AuthBar from './components/AuthBar.jsx'
+import { EditableProvider } from './lib/editing.js'
 
 // Inline fields fire on every keystroke. Writing each one straight to Firestore
 // would be both slow and expensive, so writes are coalesced per event.
 const WRITE_DEBOUNCE_MS = 800
+
+// Stable identity, so swapping to it does not look like a change every render.
+const NO_OVERRIDES = Object.freeze({})
 
 export default function App() {
   // Real wall-clock time: with a real calendar loaded, a frozen "today" would
@@ -18,7 +30,10 @@ export default function App() {
 
   const [selectedId, setSelectedId] = useState(null)
   const [toast, setToast] = useState(null)
-  const [overrides, setOverrides] = useState(loadOverrides)
+  // With Firebase configured, Firestore is the only source of shared truth.
+  // Seeding from localStorage would show a signed-out visitor stale edits from
+  // whoever last used this browser, dressed up as the current plan.
+  const [overrides, setOverrides] = useState(() => (isFirebaseConfigured ? {} : loadOverrides()))
   const [user, setUser] = useState(null)
   const [authBusy, setAuthBusy] = useState(false)
 
@@ -30,9 +45,11 @@ export default function App() {
   }, [])
 
   const allowed = canEdit(user)
-  // Cloud mode means edits are shared. Anyone else — signed out, or signed in
-  // but not on the committee list — keeps working against their own browser.
+  // Cloud mode means edits are shared and Firestore is authoritative.
   const cloud = isFirebaseConfigured && allowed
+  // Editing requires being on the committee list. The one exception is a local
+  // checkout with no Firebase config, where there is no sign-in to gate on.
+  const editable = !isFirebaseConfigured || allowed
   const pendingWrites = useRef(new Map())
 
   useEffect(() => {
@@ -48,17 +65,19 @@ export default function App() {
   useEffect(() => {
     if (!cloud) return
     let unsub = () => {}
-    watchOverrides(setOverrides, (err) => showToast(`Could not reach the database: ${err.message}`))
-      .then((fn) => {
-        unsub = fn
-      })
+    watchOverrides(setOverrides, (err) =>
+      showToast(`Could not reach the database: ${err.message}`),
+    ).then((fn) => {
+      unsub = fn
+    })
     return () => unsub()
   }, [cloud, showToast])
 
-  // Local mode keeps its own copy; cloud mode is authoritative from Firestore.
+  // Only the unconfigured local checkout persists to this browser. A deployed
+  // build never does — see the note on the overrides state above.
   useEffect(() => {
-    if (!cloud) saveOverrides(overrides)
-  }, [overrides, cloud])
+    if (!isFirebaseConfigured) saveOverrides(overrides)
+  }, [overrides])
 
   useEffect(() => {
     const timers = pendingWrites.current
@@ -77,14 +96,19 @@ export default function App() {
         timers.delete(id)
         const write = data === null ? deleteOverride(id) : saveOverride(id, data)
         write.catch((err) => showToast(`Save failed: ${err.message}`))
-      }, WRITE_DEBOUNCE_MS)
+      }, WRITE_DEBOUNCE_MS),
     )
   }
 
   // Seed data stays immutable; owner edits are layered on top so "reset"
   // always has an original to fall back to. Status is computed last, from
   // whatever date is in effect after those edits.
-  const events = applyOverrides(seedEvents, overrides).map((e) => ({
+  // Signing out drops the committee's data with it, so the next person at this
+  // screen cannot read a plan they are no longer entitled to see. Derived
+  // rather than cleared in an effect, so there is no frame where it is visible.
+  const visibleOverrides = isFirebaseConfigured && !cloud ? NO_OVERRIDES : overrides
+
+  const events = applyOverrides(seedEvents, visibleOverrides).map((e) => ({
     ...e,
     status: deriveStatus(e.date, e.endDate, now),
   }))
@@ -130,40 +154,42 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-paper">
-      <AuthBar
-        user={user}
-        allowed={allowed}
-        busy={authBusy}
-        onSignIn={() => handleAuth(signIn)}
-        onSignOut={() => handleAuth(signOutUser)}
-      />
-
-      {selectedEvent ? (
-        <EventDetail
-          event={selectedEvent}
-          originalDate={selectedSeed?.date ?? selectedEvent.date}
-          today={now}
-          onBack={() => setSelectedId(null)}
-          onChange={(patch) => handleEventChange(selectedEvent.id, patch)}
-          onReset={() => handleEventReset(selectedEvent.id)}
+    <EditableProvider value={editable}>
+      <div className="min-h-screen bg-paper">
+        <AuthBar
+          user={user}
+          allowed={allowed}
+          busy={authBusy}
+          onSignIn={() => handleAuth(signIn)}
+          onSignOut={() => handleAuth(signOutUser)}
         />
-      ) : (
-        <Dashboard
-          events={events}
-          today={now}
-          onSelectEvent={setSelectedId}
-          onCloneEvent={handleClone}
-        />
-      )}
 
-      {toast && (
-        <div className="fixed inset-x-0 bottom-5 flex justify-center px-4">
-          <div className="rounded-full border border-border bg-ink px-4 py-2 text-sm font-medium text-paper shadow-lg">
-            {toast}
+        {selectedEvent ? (
+          <EventDetail
+            event={selectedEvent}
+            originalDate={selectedSeed?.date ?? selectedEvent.date}
+            today={now}
+            onBack={() => setSelectedId(null)}
+            onChange={(patch) => handleEventChange(selectedEvent.id, patch)}
+            onReset={() => handleEventReset(selectedEvent.id)}
+          />
+        ) : (
+          <Dashboard
+            events={events}
+            today={now}
+            onSelectEvent={setSelectedId}
+            onCloneEvent={handleClone}
+          />
+        )}
+
+        {toast && (
+          <div className="fixed inset-x-0 bottom-5 flex justify-center px-4">
+            <div className="rounded-full border border-border bg-ink px-4 py-2 text-sm font-medium text-paper shadow-lg">
+              {toast}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </EditableProvider>
   )
 }

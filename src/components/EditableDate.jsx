@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatTime } from '../lib/records.js'
+import { useEditable } from '../lib/editing.js'
 
 function format(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
@@ -28,6 +29,7 @@ export default function EditableDate({
   onTimeChange,
   onReset,
 }) {
+  const editable = useEditable()
   const [editing, setEditing] = useState(false)
   const [editingTime, setEditingTime] = useState(false)
   const dateRef = useRef(null)
@@ -41,6 +43,24 @@ export default function EditableDate({
   useEffect(() => {
     if (editingTime) timeRef.current?.focus()
   }, [editingTime])
+
+  // Read-only visitors see the same facts without the click-to-edit affordance.
+  if (!editable) {
+    return (
+      <span className="inline-flex flex-wrap items-center gap-1.5 font-mono text-xs text-ink-soft">
+        <span>{format(value)}</span>
+        {endDate && <span>&ndash; {format(endDate)}</span>}
+        {startTime && (
+          <>
+            <span aria-hidden="true" className="text-border">
+              ·
+            </span>
+            <span>starts {formatTime(startTime)}</span>
+          </>
+        )}
+      </span>
+    )
+  }
 
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">

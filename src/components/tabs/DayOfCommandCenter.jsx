@@ -3,13 +3,19 @@ import { taskStatusTone } from '../../data/events.js'
 import StatusPill from '../StatusPill.jsx'
 import { InlineField, RemoveButton, AddButton } from '../fields.jsx'
 import { formatTime, toMinutes, offsetFromStart } from '../../lib/records.js'
+import { useEditable } from '../../lib/editing.js'
 
 export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) {
+  const editable = useEditable()
   const isLiveDay = event.status === 'Live Today'
   const [clock, setClock] = useState(() => (isLiveDay ? new Date() : today))
   // On the day this is a floor tool — big tap targets, no text fields to fumble
   // with. Editing is a separate mode you opt into while planning.
   const [editing, setEditing] = useState(false)
+
+  // Tapping a row advances its status, so it is a button for people who may
+  // edit and inert markup for everyone else.
+  const Row = editable ? 'button' : 'div'
 
   const items = useMemo(
     () => [...event.runOfShow].sort((a, b) => toMinutes(a.time) - toMinutes(b.time)),
@@ -125,17 +131,21 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
 
       <div className="mb-3 flex items-center justify-between gap-3">
         <p className="text-xs text-ink-soft">
-          {editing
+          {!editable
+            ? 'Run of show for the day. Sign in as a committee member to advance items.'
+            : editing
             ? 'Editing the schedule. Items sort by time automatically.'
             : 'Single-tap mode for floor volunteers — tap an item to advance it.'}
         </p>
-        <button
-          type="button"
-          onClick={() => setEditing((v) => !v)}
-          className="focus-ring shrink-0 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-        >
-          {editing ? 'Done editing' : 'Edit schedule'}
-        </button>
+        {editable && (
+          <button
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className="focus-ring shrink-0 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+          >
+            {editing ? 'Done editing' : 'Edit schedule'}
+          </button>
+        )}
       </div>
 
       <ol className="flex flex-col gap-2">
@@ -183,12 +193,11 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
                 <RemoveButton onClick={() => removeItem(idx)} title="Remove this item" />
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => cycleStatus(idx)}
-                className={`focus-ring flex w-full items-center gap-4 rounded-xl border border-border bg-surface px-4 py-4 text-left transition ${
-                  it.status === 'Done' ? 'opacity-60' : ''
-                }`}
+              <Row
+                {...(editable ? { type: 'button', onClick: () => cycleStatus(idx) } : {})}
+                className={`flex w-full items-center gap-4 rounded-xl border border-border bg-surface px-4 py-4 text-left transition ${
+                  editable ? 'focus-ring' : ''
+                } ${it.status === 'Done' ? 'opacity-60' : ''}`}
               >
                 <span className="w-14 shrink-0">
                   <span className="font-mono tabular block text-base font-semibold text-ink-soft">
@@ -207,7 +216,7 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
                   <span className="block text-xs text-ink-soft">{it.owner || 'Unassigned'}</span>
                 </span>
                 <StatusPill label={it.status} tone={taskStatusTone[it.status] ?? 'neutral'} />
-              </button>
+              </Row>
             )}
           </li>
         ))}

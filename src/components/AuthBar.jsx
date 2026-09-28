@@ -30,8 +30,8 @@ export default function AuthBar({ user, allowed, busy, onSignIn, onSignOut }) {
         <p className={`text-xs ${tone}`}>
           {state === 'signedOut' && (
             <>
-              <span className="font-semibold">Not signed in.</span> Edits stay in this browser until
-              you sign in.
+              <span className="font-semibold">Not signed in.</span> Showing the original plan,
+              read-only — sign in to see the committee&rsquo;s current version and edit it.
             </>
           )}
           {state === 'editor' && (
@@ -43,7 +43,7 @@ export default function AuthBar({ user, allowed, busy, onSignIn, onSignOut }) {
           {state === 'viewer' && (
             <>
               <span className="font-semibold">{user.email} is not on the committee list.</span>{' '}
-              Edits stay in this browser and are not shared.
+              Read-only — ask an organiser to add you.
             </>
           )}
         </p>
