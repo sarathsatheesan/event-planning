@@ -45,6 +45,75 @@ export async function signIn() {
   await fb.auth.signInWithPopup(fb.authInstance, provider)
 }
 
+// ---------------------------------------------------------------- email link
+//
+// Not every committee member has a Google account — a shared org mailbox
+// often isn't one. Email-link sign-in covers them: Firebase mails a one-time
+// link, and clicking it proves the person controls that mailbox, which is the
+// same thing a Google sign-in proves. The allowlist and the security rules are
+// unchanged, so this widens who can prove an identity, never who may edit.
+
+// The address has to survive the round trip out to the mail client and back,
+// because the link lands on a fresh page load with no memory of the request.
+const EMAIL_KEY = 'eventops.emailForSignIn'
+
+export function rememberedEmail() {
+  try {
+    return window.localStorage.getItem(EMAIL_KEY)
+  } catch {
+    return null
+  }
+}
+
+function rememberEmail(email) {
+  try {
+    window.localStorage.setItem(EMAIL_KEY, email)
+  } catch {
+    // Private browsing. The user is asked for the address on return instead.
+  }
+}
+
+function forgetEmail() {
+  try {
+    window.localStorage.removeItem(EMAIL_KEY)
+  } catch {
+    // Nothing was stored, so nothing to clear.
+  }
+}
+
+/** True when this page load came from a sign-in link we issued. */
+export async function isEmailLink() {
+  const fb = await getFirebase()
+  if (!fb) return false
+  return fb.auth.isSignInWithEmailLink(fb.authInstance, window.location.href)
+}
+
+export async function sendEmailLink(email) {
+  const fb = await getFirebase()
+  if (!fb) return
+  await fb.auth.sendSignInLinkToEmail(fb.authInstance, email, {
+    // Must be an authorised domain in Firebase Auth settings, or the link is
+    // rejected on arrival. Deliberately drops any query or hash already here.
+    url: window.location.origin + window.location.pathname,
+    handleCodeInApp: true,
+  })
+  rememberEmail(email)
+}
+
+export async function completeEmailLink(email) {
+  const fb = await getFirebase()
+  if (!fb) return
+  await fb.auth.signInWithEmailLink(fb.authInstance, email, window.location.href)
+  forgetEmail()
+  // The link carries a single-use code. Signing in spends it, but leaving it
+  // in the address bar puts it in history, bookmarks and shared screenshots.
+  try {
+    window.history.replaceState({}, '', window.location.origin + window.location.pathname)
+  } catch {
+    // Not worth failing a successful sign-in over.
+  }
+}
+
 export async function signOutUser() {
   const fb = await getFirebase()
   if (!fb) return

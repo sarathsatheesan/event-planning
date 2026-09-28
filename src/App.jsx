@@ -10,6 +10,10 @@ import {
   canEdit,
   signIn,
   signOutUser,
+  isEmailLink,
+  sendEmailLink,
+  completeEmailLink,
+  rememberedEmail,
 } from './lib/firebase.js'
 import Dashboard from './components/Dashboard.jsx'
 import EventDetail from './components/EventDetail.jsx'
@@ -36,6 +40,8 @@ export default function App() {
   const [overrides, setOverrides] = useState(() => (isFirebaseConfigured ? {} : loadOverrides()))
   const [user, setUser] = useState(null)
   const [authBusy, setAuthBusy] = useState(false)
+  const [linkSentTo, setLinkSentTo] = useState(null)
+  const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false)
 
   const toastTimer = useRef(null)
   const showToast = useCallback((message) => {
@@ -60,6 +66,33 @@ export default function App() {
     })
     return () => unsub()
   }, [])
+
+  // A sign-in link lands here as an ordinary page load carrying a one-time
+  // code. Finish it before the person wonders why nothing happened.
+  useEffect(() => {
+    if (!isFirebaseConfigured) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        if (!(await isEmailLink())) return
+        const saved = rememberedEmail()
+        if (!saved) {
+          // Link opened in a browser that never made the request. Firebase
+          // wants the address back before it will honour the code.
+          if (!cancelled) setNeedsEmailConfirm(true)
+          return
+        }
+        await completeEmailLink(saved)
+      } catch (err) {
+        if (cancelled) return
+        showToast(err?.message ?? 'That sign-in link did not work.')
+        setNeedsEmailConfirm(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [showToast])
 
   // Live subscription, so two committee members editing at once see each other.
   useEffect(() => {
@@ -153,6 +186,31 @@ export default function App() {
     }
   }
 
+  async function handleSendLink(email) {
+    setAuthBusy(true)
+    try {
+      await sendEmailLink(email)
+      setLinkSentTo(email)
+      showToast(`Sign-in link sent to ${email}.`)
+    } catch (err) {
+      showToast(err?.message ?? 'Could not send that sign-in link.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  async function handleConfirmEmail(email) {
+    setAuthBusy(true)
+    try {
+      await completeEmailLink(email)
+      setNeedsEmailConfirm(false)
+    } catch (err) {
+      showToast(err?.message ?? 'That address did not match the link.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
   return (
     <EditableProvider value={editable}>
       <div className="min-h-screen bg-paper">
@@ -162,6 +220,10 @@ export default function App() {
           busy={authBusy}
           onSignIn={() => handleAuth(signIn)}
           onSignOut={() => handleAuth(signOutUser)}
+          onSendLink={handleSendLink}
+          onConfirmEmail={handleConfirmEmail}
+          linkSentTo={linkSentTo}
+          needsEmailConfirm={needsEmailConfirm}
         />
 
         {selectedEvent ? (
