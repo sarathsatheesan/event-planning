@@ -4,3 +4,10 @@ dist
 # Firebase CLI cache — local deploy state, not source.
 .firebase/
 firebase-debug.log
+
+# Firebase agent skills — reference docs the Firebase CLI installs for AI
+# coding assistants. Local tooling, not part of the app. Reinstall any time
+# with `firebase init hosting:github` or the Firebase CLI's skills command.
+.agents/
+.claude/
+skills-lock.json
