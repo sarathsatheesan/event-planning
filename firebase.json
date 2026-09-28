@@ -35,5 +35,10 @@
         ]
       }
     ]
+  },
+
+  "firestore": {
+    "comment": "Without this, the CLI has no idea where the rules live and `firebase deploy --only firestore:rules` fails with 'no targets match'. The rules are the actual security boundary, so they belong in version control and in a deploy command — not pasted into the console by hand, where the repo copy and the live copy silently drift apart.",
+    "rules": "firestore.rules"
   }
 }

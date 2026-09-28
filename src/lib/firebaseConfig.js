@@ -28,6 +28,7 @@ export const firebaseConfig = {
 export const COMMITTEE_EMAILS = [
   'utahindiacc@gmail.com',
   'sarath.s1884@gmail.com',
+  'info@iccofutah.org',
 ]
 
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId)
