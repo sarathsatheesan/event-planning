@@ -18,6 +18,9 @@ export default function ArtistDialog({ artist, eventName, busy, onSave, onClose 
   const [headcount, setHeadcount] = useState(artist?.headcount ?? '')
   const [honorarium, setHonorarium] = useState(artist?.honorarium ?? '')
   const [requests, setRequests] = useState(artist?.requests ?? '')
+  // Stored as an array, edited as text. One per line reads best, but people
+  // paste comma-separated lists out of email, so accept both.
+  const [roster, setRoster] = useState((artist?.roster ?? []).join('\n'))
   // null means "poster unchanged"; a Blob means "replace it with this".
   const [posterBlob, setPosterBlob] = useState(null)
   const [preview, setPreview] = useState(artist?.posterUrl ?? null)
@@ -64,6 +67,10 @@ export default function ArtistDialog({ artist, eventName, busy, onSave, onClose 
     onSave(
       {
         name: trimmed,
+        roster: roster
+          .split(/[\n,]/)
+          .map((n) => n.trim())
+          .filter(Boolean),
         headcount: headcount === '' ? null : Number(headcount),
         honorarium: honorarium === '' ? null : Number(honorarium),
         requests: requests.trim(),
@@ -130,9 +137,24 @@ export default function ArtistDialog({ artist, eventName, busy, onSave, onClose 
             </div>
           </div>
 
+          <label className="flex flex-col gap-1">
+            <span className={LABEL}>Artist roster</span>
+            <textarea
+              rows={3}
+              value={roster}
+              onChange={(e) => setRoster(e.target.value)}
+              placeholder={'Meera Krishnan\nArjun Rao\nDivya Menon'}
+              className={`${FIELD} resize-y`}
+            />
+            <span className="text-[11px] text-ink-soft">
+              One name per line, or comma separated. Name whoever you know — the member count
+              below can be higher.
+            </span>
+          </label>
+
           <div className="flex flex-wrap gap-3">
             <label className="flex min-w-32 flex-1 flex-col gap-1">
-              <span className={LABEL}>Performers</span>
+              <span className={LABEL}>Members</span>
               <input
                 type="number"
                 min="0"

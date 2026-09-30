@@ -3,6 +3,11 @@ import { EXPORT_SECTIONS, exportEventPdf } from '../lib/exportPdf.js'
 
 /** How much content each phase actually holds, so the picker can say so. */
 function summarise(event, key) {
+  if (key === 'artists') {
+    const n = (event.artists ?? []).length
+    if (n === 0) return 'empty'
+    return `${n} candidate${n === 1 ? '' : 's'}${event.artistChoice ? ', one selected' : ''}`
+  }
   if (key === 'preevent') {
     const n = event.checklist.length
     return n ? `${n} milestone${n === 1 ? '' : 's'}` : 'empty'
@@ -19,12 +24,17 @@ function summarise(event, key) {
 }
 
 export default function ExportDialog({ event, onClose }) {
+  // An event with no artist booking should not be offered an artist page.
+  const sections = EXPORT_SECTIONS.filter((s) => s.key !== 'artists' || event.needsArtists)
+
   // Default to the phases that have something in them — exporting three blank
   // pages is nobody's intent.
   const [selected, setSelected] = useState(() =>
-    EXPORT_SECTIONS.filter((s) => summarise(event, s.key) !== 'empty' && summarise(event, s.key) !== 'not filled in').map(
-      (s) => s.key
-    )
+    sections
+      .filter(
+        (s) => summarise(event, s.key) !== 'empty' && summarise(event, s.key) !== 'not filled in'
+      )
+      .map((s) => s.key)
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -44,7 +54,7 @@ export default function ExportDialog({ event, onClose }) {
     setError(null)
     try {
       // Keep the app's phase order regardless of the order boxes were ticked.
-      const ordered = EXPORT_SECTIONS.filter((s) => selected.includes(s.key)).map((s) => s.key)
+      const ordered = sections.filter((s) => selected.includes(s.key)).map((s) => s.key)
       await exportEventPdf(event, ordered)
       onClose()
     } catch (err) {
@@ -71,7 +81,7 @@ export default function ExportDialog({ event, onClose }) {
         </p>
 
         <ul className="mt-4 flex flex-col gap-1">
-          {EXPORT_SECTIONS.map((s) => {
+          {sections.map((s) => {
             const detail = summarise(event, s.key)
             return (
               <li key={s.key}>
@@ -85,7 +95,7 @@ export default function ExportDialog({ event, onClose }) {
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-ink">{s.label}</span>
                     <span className="block text-xs text-ink-soft">
-                      {s.phase} · {detail}
+                      {[s.phase, detail].filter(Boolean).join(' · ')}
                     </span>
                   </span>
                 </label>
@@ -98,7 +108,7 @@ export default function ExportDialog({ event, onClose }) {
 
         <div className="mt-5 flex items-center justify-between gap-3">
           <p className="text-xs text-ink-soft">
-            {selected.length} of {EXPORT_SECTIONS.length} selected
+            {selected.length} of {sections.length} selected
           </p>
           <div className="flex gap-2">
             <button

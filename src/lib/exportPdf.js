@@ -4,6 +4,7 @@ import { formatDateRange } from '../data/events.js'
 // The four phases, in the order they appear in the app. `key` matches the
 // checkbox ids in the export dialog.
 export const EXPORT_SECTIONS = [
+  { key: 'artists', label: 'Artist Selection', phase: null },
   { key: 'preevent', label: 'Pre-Event Planning', phase: 'Phase 1' },
   { key: 'dayof', label: 'Day-Of Command Center', phase: 'Phase 2' },
   { key: 'vendors', label: 'Vendor & Resource Directory', phase: 'Phase 3' },
@@ -36,8 +37,11 @@ function money(n) {
 
 /** Section banner. Every section starts on its own page. */
 function sectionHeading(doc, phase, label, y) {
-  doc.setFont('helvetica', 'bold').setFontSize(7).setTextColor(...SOFT)
-  doc.text(phase.toUpperCase(), 40, y)
+  // Artist selection has no phase number — it runs alongside the four phases.
+  if (phase) {
+    doc.setFont('helvetica', 'bold').setFontSize(7).setTextColor(...SOFT)
+    doc.text(phase.toUpperCase(), 40, y)
+  }
   doc.setFont('helvetica', 'bold').setFontSize(15).setTextColor(...INK)
   doc.text(label, 40, y + 16)
   doc.setDrawColor(...RULE).setLineWidth(0.75)
@@ -136,6 +140,63 @@ export async function exportEventPdf(event, selectedKeys) {
     }
     first = false
     y = sectionHeading(doc, phase, label, y)
+  }
+
+  // ---- Artist selection ----
+  if (selectedKeys.includes('artists')) {
+    startSection(null, 'Artist Selection')
+    const artists = event.artists ?? []
+    const choice = event.artistChoice ?? null
+    const chosen = choice ? artists.find((a) => a.id === choice.artistId) : null
+
+    if (artists.length === 0) {
+      doc.setFont('helvetica', 'italic').setFontSize(9).setTextColor(...SOFT)
+      doc.text('No candidate groups recorded.', 40, y)
+    } else {
+      // The decision, and the reasoning, before the comparison it came from.
+      if (chosen) {
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(30, 142, 90)
+        doc.text(`Selected: ${safe(chosen.name)}`, 40, y)
+        y += 14
+        doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(...INK)
+        const why = doc.splitTextToSize(safe(choice.rationale ?? ''), pageWidth - 80)
+        doc.text(why, 40, y)
+        y += why.length * 11 + 4
+        doc.setFontSize(8).setTextColor(...SOFT)
+        doc.text(
+          `Decided ${choice.decidedOn ?? 'date not recorded'}${choice.decidedBy ? ` by ${choice.decidedBy}` : ''}`,
+          40,
+          y
+        )
+        y += 18
+      } else {
+        doc.setFont('helvetica', 'italic').setFontSize(9).setTextColor(...SOFT)
+        doc.text('No group selected yet.', 40, y)
+        y += 18
+      }
+
+      table(
+        doc,
+        autoTable,
+        ['Group', 'Artist roster', 'Members', 'Honorarium', 'Special requests', ''],
+        artists.map((a) => [
+          a.name || '(unnamed)',
+          (a.roster ?? []).join(', ') || '—',
+          a.headcount ?? '—',
+          money(a.honorarium),
+          a.requests || '—',
+          choice?.artistId === a.id ? 'SELECTED' : '',
+        ]),
+        y,
+        {
+          0: { cellWidth: 92, fontStyle: 'bold' },
+          1: { cellWidth: 104 },
+          2: { cellWidth: 46, halign: 'right' },
+          3: { cellWidth: 60, halign: 'right' },
+          5: { cellWidth: 52, fontStyle: 'bold', textColor: [30, 142, 90] },
+        }
+      )
+    }
   }
 
   // ---- Phase 1 ----

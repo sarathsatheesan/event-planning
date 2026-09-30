@@ -1,17 +1,33 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
 import { uploadArtistPoster, deleteArtistPoster } from '../../lib/firebase.js'
 import ArtistDialog from '../ArtistDialog.jsx'
 import ConfirmArtistDialog from '../ConfirmArtistDialog.jsx'
+import PosterPreview from '../PosterPreview.jsx'
 
 /**
  * Candidate artist groups for one event, and the record of which was chosen.
  *
- * Most of the ICC calendar needs performers; a blood drive does not. The
- * whole tab is behind a per-event switch so the pages that do not need it
- * never carry it.
+ * Two views of the same list. The table is for deciding — every group's fee
+ * and size on one screen, sortable. The cards are for browsing the artwork.
+ * Committee members want both at different moments, so the choice is theirs
+ * and it is remembered.
  */
+
+const VIEW_KEY = 'eventops.artistView'
+
+// Stable identity for the empty case. A fresh [] every render would defeat the
+// sort memo below, which is the one thing here worth memoising.
+const NO_ARTISTS = Object.freeze([])
+
+function readView() {
+  try {
+    return window.localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'table'
+  } catch {
+    return 'table'
+  }
+}
 
 function money(n) {
   return n == null ? '—' : `$${n.toLocaleString('en-US')}`
@@ -34,30 +50,87 @@ function longDate(dateStr) {
   })
 }
 
+const BTN =
+  'focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition'
+
+/** A column header that sorts. Arrow shows direction only when it is active. */
+function SortHeader({ label, column, sort, onSort, className = '' }) {
+  const active = sort.key === column
+  return (
+    <th scope="col" className={`px-3 py-2 text-left font-semibold ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(column)}
+        aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+        className={`focus-ring inline-flex items-center gap-1 rounded transition hover:text-accent ${
+          active ? 'text-accent' : ''
+        }`}
+      >
+        {label}
+        <span aria-hidden="true" className={active ? '' : 'opacity-25'}>
+          {active && sort.dir === 'desc' ? '▼' : '▲'}
+        </span>
+      </button>
+    </th>
+  )
+}
+
 export default function ArtistSelection({ event, onChange, currentUserEmail }) {
   const editable = useEditable()
-  const artists = event.artists ?? []
+  const artists = event.artists ?? NO_ARTISTS
   const choice = event.artistChoice ?? null
   const selected = choice ? artists.find((a) => a.id === choice.artistId) : null
 
-  const [dialog, setDialog] = useState(null) // { artist } | { artist: null }
+  const [view, setView] = useState(readView)
+  const [sort, setSort] = useState({ key: null, dir: 'asc' })
+  const [dialog, setDialog] = useState(null)
   const [confirming, setConfirming] = useState(null)
+  const [poster, setPoster] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+
+  function chooseView(next) {
+    setView(next)
+    try {
+      window.localStorage.setItem(VIEW_KEY, next)
+    } catch {
+      // Private browsing. The preference just will not persist.
+    }
+  }
+
+  function toggleSort(key) {
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
+  }
+
+  const ordered = useMemo(() => {
+    if (!sort.key) return artists
+    const dir = sort.dir === 'asc' ? 1 : -1
+    return [...artists].sort((a, b) => {
+      if (sort.key === 'name') return dir * (a.name ?? '').localeCompare(b.name ?? '')
+      const av = a[sort.key]
+      const bv = b[sort.key]
+      // Blanks sort last whichever way the column is pointing. A group whose
+      // fee nobody has asked for yet is not the cheapest option.
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      return dir * (av - bv)
+    })
+  }, [artists, sort])
 
   async function handleSave(fields, posterBlob) {
     setBusy(true)
     setError(null)
     try {
       const existing = dialog?.artist ?? null
-      let poster = { posterPath: existing?.posterPath ?? null, posterUrl: existing?.posterUrl ?? null }
+      let art = { posterPath: existing?.posterPath ?? null, posterUrl: existing?.posterUrl ?? null }
       if (posterBlob) {
         const uploaded = await uploadArtistPoster(event.id, posterBlob)
-        poster = { posterPath: uploaded.path, posterUrl: uploaded.url }
+        art = { posterPath: uploaded.path, posterUrl: uploaded.url }
         // Replacing a poster: drop the old file rather than leave it paid for.
         if (existing?.posterPath) deleteArtistPoster(existing.posterPath)
       }
-      const record = { ...(existing ?? {}), ...fields, ...poster }
+      const record = { ...(existing ?? {}), ...fields, ...art }
       const next = existing
         ? artists.map((a) => (a.id === existing.id ? record : a))
         : [...artists, { ...record, id: nextId(artists) }]
@@ -111,6 +184,51 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
     )
   }
 
+  const actions = (a, isChosen) =>
+    editable && (
+      <div className="flex items-center gap-1.5 whitespace-nowrap">
+        {!isChosen && (
+          <button
+            type="button"
+            onClick={() => setConfirming(a)}
+            className={`${BTN} hover:border-success hover:text-success`}
+          >
+            Select
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setDialog({ artist: a })}
+          className={`${BTN} hover:border-accent hover:text-accent`}
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => handleRemove(a)}
+          className="focus-ring rounded-md px-2 py-1 text-xs font-semibold text-ink-soft transition hover:bg-critical-soft hover:text-critical"
+        >
+          Remove
+        </button>
+      </div>
+    )
+
+  const thumb = (a, size) =>
+    a.posterUrl ? (
+      <button
+        type="button"
+        onClick={() => setPoster(a)}
+        title="View the poster"
+        className={`focus-ring block overflow-hidden rounded ${size}`}
+      >
+        <img src={a.posterUrl} alt={`${a.name} poster`} loading="lazy" className="h-full w-full object-cover" />
+      </button>
+    ) : (
+      <div className={`flex items-center justify-center rounded bg-paper text-[10px] text-ink-soft ${size}`}>
+        None
+      </div>
+    )
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -121,26 +239,44 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
                 selected ? ' · one selected' : ' · none selected yet'
               }`}
         </p>
-        {editable && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setDialog({ artist: null })}
-              className="focus-ring rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink transition"
-            >
-              Add artist group
-            </button>
-            {artists.length === 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {artists.length > 0 && (
+            <div className="flex overflow-hidden rounded-md border border-border">
+              {['table', 'cards'].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => chooseView(v)}
+                  className={`focus-ring px-2.5 py-1 text-xs font-semibold capitalize transition ${
+                    view === v ? 'bg-accent text-accent-ink' : 'text-ink-soft hover:text-ink'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
+          {editable && (
+            <>
               <button
                 type="button"
-                onClick={() => onChange({ needsArtists: false })}
-                className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+                onClick={() => setDialog({ artist: null })}
+                className="focus-ring rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink transition"
               >
-                This event has no artists
+                Add artist group
               </button>
-            )}
-          </div>
-        )}
+              {artists.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ needsArtists: false })}
+                  className={`${BTN} hover:border-accent hover:text-accent`}
+                >
+                  This event has no artists
+                </button>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {error && <p className="mb-3 text-xs font-medium text-critical">{error}</p>}
@@ -160,7 +296,7 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
             <button
               type="button"
               onClick={() => onChange({ artistChoice: null })}
-              className="focus-ring mt-2 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-critical hover:text-critical"
+              className={`${BTN} mt-2 hover:border-critical hover:text-critical`}
             >
               Undo selection
             </button>
@@ -172,9 +308,80 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
         <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-ink-soft">
           Add the groups you are considering. Compare them side by side, then confirm one.
         </div>
+      ) : view === 'table' ? (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full min-w-[54rem] border-collapse text-sm">
+            <thead className="bg-surface-raised text-xs text-ink-soft">
+              <tr className="border-b border-border">
+                <th scope="col" className="px-3 py-2 text-left font-semibold">
+                  Poster
+                </th>
+                <SortHeader label="Group name" column="name" sort={sort} onSort={toggleSort} />
+                <th scope="col" className="px-3 py-2 text-left font-semibold">
+                  Artist roster
+                </th>
+                <SortHeader
+                  label="Members"
+                  column="headcount"
+                  sort={sort}
+                  onSort={toggleSort}
+                  className="whitespace-nowrap"
+                />
+                <SortHeader
+                  label="Honorarium"
+                  column="honorarium"
+                  sort={sort}
+                  onSort={toggleSort}
+                  className="whitespace-nowrap"
+                />
+                <th scope="col" className="px-3 py-2 text-left font-semibold">
+                  Special requests
+                </th>
+                {editable && <th scope="col" className="w-px px-3 py-2 text-left font-semibold" />}
+              </tr>
+            </thead>
+            <tbody>
+              {ordered.map((a) => {
+                const isChosen = choice?.artistId === a.id
+                return (
+                  <tr
+                    key={a.id}
+                    className={`border-b border-border-soft align-top last:border-b-0 ${
+                      isChosen ? 'bg-success-soft' : 'bg-surface'
+                    }`}
+                  >
+                    <td className="px-3 py-2">{thumb(a, 'h-12 w-10')}</td>
+                    <td className="px-3 py-2">
+                      <span className="font-semibold text-ink">{a.name}</span>
+                      {isChosen && (
+                        <span className="ml-2 whitespace-nowrap rounded-full bg-success px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-paper">
+                          Selected
+                        </span>
+                      )}
+                      {isChosen && choice.rationale && (
+                        <span className="mt-1 block text-xs leading-snug text-ink-soft">
+                          {choice.rationale}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs leading-snug text-ink-soft">
+                      {a.roster?.length ? a.roster.join(', ') : '—'}
+                    </td>
+                    <td className="tabular px-3 py-2 text-ink">{a.headcount ?? '—'}</td>
+                    <td className="tabular px-3 py-2 text-ink">{money(a.honorarium)}</td>
+                    <td className="max-w-xs px-3 py-2 text-xs leading-snug text-ink-soft">
+                      {a.requests || '—'}
+                    </td>
+                    {editable && <td className="w-px px-3 py-2">{actions(a, isChosen)}</td>}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {artists.map((a) => {
+          {ordered.map((a) => {
             const isChosen = choice?.artistId === a.id
             return (
               <li
@@ -184,18 +391,7 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
                 }`}
               >
                 <div className="relative h-36 w-full bg-paper">
-                  {a.posterUrl ? (
-                    <img
-                      src={a.posterUrl}
-                      alt={`${a.name} poster`}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-ink-soft">
-                      No poster
-                    </div>
-                  )}
+                  {thumb(a, 'h-full w-full')}
                   {isChosen && (
                     <span className="absolute left-2 top-2 rounded-full bg-success px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-paper shadow">
                       Selected
@@ -208,7 +404,7 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
 
                   <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
                     <div>
-                      <dt className="text-ink-soft">Performers</dt>
+                      <dt className="text-ink-soft">Members</dt>
                       <dd className="tabular font-semibold text-ink">{a.headcount ?? '—'}</dd>
                     </div>
                     <div>
@@ -216,6 +412,13 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
                       <dd className="tabular font-semibold text-ink">{money(a.honorarium)}</dd>
                     </div>
                   </dl>
+
+                  {a.roster?.length > 0 && (
+                    <p className="text-xs leading-snug text-ink-soft">
+                      <span className="font-semibold text-ink">Roster: </span>
+                      {a.roster.join(', ')}
+                    </p>
+                  )}
 
                   {a.requests && (
                     <p className="text-xs leading-snug text-ink-soft">
@@ -231,33 +434,7 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
                     </p>
                   )}
 
-                  {editable && (
-                    <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
-                      {!isChosen && (
-                        <button
-                          type="button"
-                          onClick={() => setConfirming(a)}
-                          className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-success hover:text-success"
-                        >
-                          Select
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setDialog({ artist: a })}
-                        className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(a)}
-                        className="focus-ring rounded-md px-2 py-1 text-xs font-semibold text-ink-soft transition hover:bg-critical-soft hover:text-critical"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
+                  <div className="mt-auto pt-1">{actions(a, isChosen)}</div>
                 </div>
               </li>
             )
@@ -283,6 +460,8 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
           onClose={() => setConfirming(null)}
         />
       )}
+
+      {poster && <PosterPreview artist={poster} onClose={() => setPoster(null)} />}
     </div>
   )
 }

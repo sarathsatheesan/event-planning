@@ -21,15 +21,15 @@ const TABS = [
 ]
 
 /**
- * Artist selection sits beside the four phases rather than inside one. It is
- * shown for events that use it, plus to editors who might want to switch it
- * on — a read-only visitor looking at a blood drive never sees it.
+ * Artist selection leads, because booking the performers is what the rest of
+ * the plan hangs off — the run of show, the budget and half the T-60
+ * milestones cannot be settled until a group is confirmed. It is shown for
+ * events that use it, plus to editors who might want to switch it on; a
+ * read-only visitor looking at a blood drive never sees it.
  */
 function tabsFor(event, editable) {
   if (!event.needsArtists && !editable) return TABS
-  const withArtists = [...TABS]
-  withArtists.splice(1, 0, { key: 'artists', label: 'Artist Selection' })
-  return withArtists
+  return [{ key: 'artists', label: 'Artist Selection' }, ...TABS]
 }
 
 export default function EventDetail({
