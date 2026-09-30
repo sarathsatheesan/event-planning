@@ -6,7 +6,9 @@ import EditableDate from './EditableDate.jsx'
 import { InlineField, NumberField } from './fields.jsx'
 import ExportDialog from './ExportDialog.jsx'
 import EventArt from './EventArt.jsx'
+import { useEditable } from '../lib/editing.js'
 import PreEventPlanning from './tabs/PreEventPlanning.jsx'
+import ArtistSelection from './tabs/ArtistSelection.jsx'
 import DayOfCommandCenter from './tabs/DayOfCommandCenter.jsx'
 import VendorDirectory from './tabs/VendorDirectory.jsx'
 import PostEventWrapUp from './tabs/PostEventWrapUp.jsx'
@@ -18,10 +20,34 @@ const TABS = [
   { key: 'wrapup', label: 'Post-Event Wrap-Up', phase: 'Phase 4' },
 ]
 
-export default function EventDetail({ event, originalDate, today, onBack, onChange, onReset }) {
+/**
+ * Artist selection sits beside the four phases rather than inside one. It is
+ * shown for events that use it, plus to editors who might want to switch it
+ * on — a read-only visitor looking at a blood drive never sees it.
+ */
+function tabsFor(event, editable) {
+  if (!event.needsArtists && !editable) return TABS
+  const withArtists = [...TABS]
+  withArtists.splice(1, 0, { key: 'artists', label: 'Artist Selection' })
+  return withArtists
+}
+
+export default function EventDetail({
+  event,
+  originalDate,
+  today,
+  onBack,
+  onChange,
+  onReset,
+  currentUserEmail,
+}) {
+  const editable = useEditable()
   const defaultTab = event.status === 'Live Today' ? 'dayof' : event.status === 'Completed' ? 'wrapup' : 'preevent'
   const [tab, setTab] = useState(defaultTab)
   const [exporting, setExporting] = useState(false)
+  const tabs = tabsFor(event, editable)
+  // Switching artists off while its tab is open would otherwise show nothing.
+  const activeTab = tabs.some((t) => t.key === tab) ? tab : 'preevent'
   const pct = readiness(event)
   const tone = statusTone[event.status]
 
@@ -115,20 +141,22 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
       </div>
 
       <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
             className={`focus-ring relative whitespace-nowrap px-3 py-2.5 text-sm font-semibold transition ${
-              tab === t.key ? 'text-accent' : 'text-ink-soft hover:text-ink'
+              activeTab === t.key ? 'text-accent' : 'text-ink-soft hover:text-ink'
             }`}
           >
-            <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-soft/70">
-              {t.phase}
-            </span>
+            {t.phase && (
+              <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-soft/70">
+                {t.phase}
+              </span>
+            )}
             {t.label}
-            {tab === t.key && (
+            {activeTab === t.key && (
               <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-accent" />
             )}
           </button>
@@ -136,23 +164,26 @@ export default function EventDetail({ event, originalDate, today, onBack, onChan
       </div>
 
       <div>
-        {tab === 'preevent' && (
+        {activeTab === 'preevent' && (
           <PreEventPlanning
             event={event}
             onChecklistChange={(checklist) => onChange({ checklist })}
           />
         )}
-        {tab === 'dayof' && (
+        {activeTab === 'artists' && (
+          <ArtistSelection event={event} onChange={onChange} currentUserEmail={currentUserEmail} />
+        )}
+        {activeTab === 'dayof' && (
           <DayOfCommandCenter
             event={event}
             today={today}
             onRunOfShowChange={(runOfShow) => onChange({ runOfShow })}
           />
         )}
-        {tab === 'vendors' && (
+        {activeTab === 'vendors' && (
           <VendorDirectory event={event} onVendorsChange={(vendors) => onChange({ vendors })} />
         )}
-        {tab === 'wrapup' && (
+        {activeTab === 'wrapup' && (
           <PostEventWrapUp event={event} onRetroChange={(retro) => onChange({ retro })} />
         )}
       </div>

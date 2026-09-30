@@ -234,6 +234,7 @@ export default function App() {
             onBack={() => setSelectedId(null)}
             onChange={(patch) => handleEventChange(selectedEvent.id, patch)}
             onReset={() => handleEventReset(selectedEvent.id)}
+            currentUserEmail={user?.email ?? null}
           />
         ) : (
           <Dashboard

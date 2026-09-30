@@ -28,6 +28,13 @@ const shell = {
   runOfShow: [],
   vendors: [],
   retro: null,
+  // Artist booking is off until someone turns it on: a blood drive and a
+  // volunteer picnic have no performers, and an empty candidate grid on every
+  // event would be noise on twelve pages to serve three.
+  needsArtists: false,
+  artists: [],
+  // { artistId, rationale, decidedOn, decidedBy } once a group is confirmed.
+  artistChoice: null,
 }
 
 export const events = [

@@ -9,13 +9,22 @@ async function getFirebase() {
   if (!isFirebaseConfigured) return null
   if (!appPromise) {
     appPromise = (async () => {
-      const [{ initializeApp }, auth, store] = await Promise.all([
+      const [{ initializeApp }, auth, store, storage] = await Promise.all([
         import('firebase/app'),
         import('firebase/auth'),
         import('firebase/firestore'),
+        import('firebase/storage'),
       ])
       const app = initializeApp(firebaseConfig)
-      return { app, auth, store, authInstance: auth.getAuth(app), db: store.getFirestore(app) }
+      return {
+        app,
+        auth,
+        store,
+        storage,
+        authInstance: auth.getAuth(app),
+        db: store.getFirestore(app),
+        bucket: storage.getStorage(app),
+      }
     })()
   }
   return appPromise
@@ -158,4 +167,37 @@ export async function deleteOverride(eventId) {
   if (!fb) return
   const { doc, deleteDoc } = fb.store
   await deleteDoc(doc(fb.db, 'eventOverrides', eventId))
+}
+
+// ------------------------------------------------------------ artist posters
+//
+// Images go to Cloud Storage rather than into the event document. A Firestore
+// document caps at 1MB and India Mela's checklist alone is 130 entries, so
+// base64 posters would break the event that needs them most.
+
+/** Uploads an already-downscaled blob. Returns the path and a display URL. */
+export async function uploadArtistPoster(eventId, blob) {
+  const fb = await getFirebase()
+  if (!fb) throw new Error('Cloud storage is not configured.')
+  const { ref, uploadBytes, getDownloadURL } = fb.storage
+  const ext = blob.type === 'image/jpeg' ? 'jpg' : (blob.type.split('/')[1] ?? 'img')
+  // Random suffix, not the original filename: two committee members uploading
+  // "poster.jpg" for the same event must not overwrite each other.
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const path = `artistPosters/${eventId}/${name}`
+  const handle = ref(fb.bucket, path)
+  await uploadBytes(handle, blob, { contentType: blob.type })
+  return { path, url: await getDownloadURL(handle) }
+}
+
+/** Best-effort cleanup so removing a candidate does not orphan its poster. */
+export async function deleteArtistPoster(path) {
+  const fb = await getFirebase()
+  if (!fb || !path) return
+  const { ref, deleteObject } = fb.storage
+  try {
+    await deleteObject(ref(fb.bucket, path))
+  } catch {
+    // Already gone, or never uploaded. Not worth surfacing to the user.
+  }
 }

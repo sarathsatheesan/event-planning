@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Storage rules for ICC EventOps — artist poster uploads.
+//
+// Same allowlist as firestore.rules. Keep the three lists in step:
+// this file, firestore.rules, and COMMITTEE_EMAILS in src/lib/firebaseConfig.js.
+//
+// One caveat worth knowing: getDownloadURL() hands back a URL containing a
+// token, and that URL works for anyone who has it, regardless of these rules.
+// Only committee members can obtain one (the URLs live in Firestore, which is
+// committee-only), but treat a poster URL as shareable once it exists. Fine
+// for promotional posters; do not put anything confidential in this bucket.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isCommittee() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in [
+             'utahindiacc@gmail.com',
+             'sarath.s1884@gmail.com',
+             'info@iccofutah.org'
+           ];
+    }
+
+    match /artistPosters/{eventId}/{fileName} {
+      allow read: if isCommittee();
+      // The app downscales before uploading, so anything near this ceiling did
+      // not come from the app. Images only — no PDFs, no archives.
+      allow write: if isCommittee()
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Anything not matched above is denied. Do not add a catch-all.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
