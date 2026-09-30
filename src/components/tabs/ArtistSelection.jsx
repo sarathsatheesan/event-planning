@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
-import { uploadArtistPoster, deleteArtistPoster } from '../../lib/firebase.js'
+import { uploadArtistPoster, uploadArtistBio, deleteArtistFile } from '../../lib/firebase.js'
+import { rosterSummary, bioContentType, formatBytes } from '../../lib/artists.js'
 import ArtistDialog from '../ArtistDialog.jsx'
 import ConfirmArtistDialog from '../ConfirmArtistDialog.jsx'
 import PosterPreview from '../PosterPreview.jsx'
@@ -52,6 +53,23 @@ function longDate(dateStr) {
 
 const BTN =
   'focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition'
+
+/** Opens the group's bio in a new tab. Word files download rather than render,
+ *  which is the browser's call, not ours. */
+function BioLink({ bio, className = '' }) {
+  return (
+    <a
+      href={bio.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`focus-ring inline-flex max-w-full items-center gap-1 text-xs font-medium text-accent hover:underline ${className}`}
+    >
+      <span aria-hidden="true">📄</span>
+      <span className="truncate">{bio.name}</span>
+      <span className="shrink-0 text-ink-soft">({formatBytes(bio.size)})</span>
+    </a>
+  )
+}
 
 /** A column header that sorts. Arrow shows direction only when it is active. */
 function SortHeader({ label, column, sort, onSort, className = '' }) {
@@ -118,7 +136,7 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
     })
   }, [artists, sort])
 
-  async function handleSave(fields, posterBlob) {
+  async function handleSave(fields, posterBlob, bioChange) {
     setBusy(true)
     setError(null)
     try {
@@ -128,9 +146,20 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
         const uploaded = await uploadArtistPoster(event.id, posterBlob)
         art = { posterPath: uploaded.path, posterUrl: uploaded.url }
         // Replacing a poster: drop the old file rather than leave it paid for.
-        if (existing?.posterPath) deleteArtistPoster(existing.posterPath)
+        if (existing?.posterPath) deleteArtistFile(existing.posterPath)
       }
-      const record = { ...(existing ?? {}), ...fields, ...art }
+      // undefined means the dialog never touched the bio.
+      let bioPatch = {}
+      if (bioChange !== undefined) {
+        // Upload first: a failure here must not leave the record pointing at a
+        // file that has already been deleted.
+        const uploaded = bioChange
+          ? await uploadArtistBio(event.id, bioChange, bioContentType(bioChange))
+          : null
+        if (existing?.bio?.path) deleteArtistFile(existing.bio.path)
+        bioPatch = { bio: uploaded }
+      }
+      const record = { ...(existing ?? {}), ...fields, ...art, ...bioPatch }
       const next = existing
         ? artists.map((a) => (a.id === existing.id ? record : a))
         : [...artists, { ...record, id: nextId(artists) }]
@@ -144,7 +173,8 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
   }
 
   function handleRemove(artist) {
-    if (artist.posterPath) deleteArtistPoster(artist.posterPath)
+    if (artist.posterPath) deleteArtistFile(artist.posterPath)
+    if (artist.bio?.path) deleteArtistFile(artist.bio.path)
     const patch = { artists: artists.filter((a) => a.id !== artist.id) }
     // Removing the chosen group must not leave a selection pointing at nothing.
     if (choice?.artistId === artist.id) patch.artistChoice = null
@@ -363,9 +393,10 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
                           {choice.rationale}
                         </span>
                       )}
+                      {a.bio?.url && <BioLink bio={a.bio} className="mt-1" />}
                     </td>
                     <td className="px-3 py-2 text-xs leading-snug text-ink-soft">
-                      {a.roster?.length ? a.roster.join(', ') : '—'}
+                      {rosterSummary(a.roster) || '—'}
                     </td>
                     <td className="tabular px-3 py-2 text-ink">{a.headcount ?? '—'}</td>
                     <td className="tabular px-3 py-2 text-ink">{money(a.honorarium)}</td>
@@ -413,12 +444,14 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
                     </div>
                   </dl>
 
-                  {a.roster?.length > 0 && (
+                  {rosterSummary(a.roster) && (
                     <p className="text-xs leading-snug text-ink-soft">
                       <span className="font-semibold text-ink">Roster: </span>
-                      {a.roster.join(', ')}
+                      {rosterSummary(a.roster)}
                     </p>
                   )}
+
+                  {a.bio?.url && <BioLink bio={a.bio} />}
 
                   {a.requests && (
                     <p className="text-xs leading-snug text-ink-soft">

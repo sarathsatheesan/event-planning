@@ -24,6 +24,19 @@ service firebase.storage {
            ];
     }
 
+    // Bios are Word or PDF profiles of a group. Listed exactly, because
+    // "application/*" would wave through executables and archives.
+    match /artistBios/{eventId}/{fileName} {
+      allow read: if isCommittee();
+      allow write: if isCommittee()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType in [
+             'application/pdf',
+             'application/msword',
+             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+           ];
+    }
+
     match /artistPosters/{eventId}/{fileName} {
       allow read: if isCommittee();
       // The app downscales before uploading, so anything near this ceiling did

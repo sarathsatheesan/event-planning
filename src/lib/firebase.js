@@ -190,8 +190,21 @@ export async function uploadArtistPoster(eventId, blob) {
   return { path, url: await getDownloadURL(handle) }
 }
 
-/** Best-effort cleanup so removing a candidate does not orphan its poster. */
-export async function deleteArtistPoster(path) {
+/** Uploads a bio document as-is. The caller has already checked type and size. */
+export async function uploadArtistBio(eventId, file, contentType) {
+  const fb = await getFirebase()
+  if (!fb) throw new Error('Cloud storage is not configured.')
+  const { ref, uploadBytes, getDownloadURL } = fb.storage
+  const ext = (file.name.split('.').pop() ?? 'bin').toLowerCase()
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+  const path = `artistBios/${eventId}/${name}`
+  const handle = ref(fb.bucket, path)
+  await uploadBytes(handle, file, { contentType })
+  return { path, url: await getDownloadURL(handle), name: file.name, size: file.size }
+}
+
+/** Best-effort cleanup so removing a candidate does not orphan its files. */
+export async function deleteArtistFile(path) {
   const fb = await getFirebase()
   if (!fb || !path) return
   const { ref, deleteObject } = fb.storage

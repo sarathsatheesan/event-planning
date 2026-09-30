@@ -133,6 +133,14 @@ export default function App() {
     )
   }
 
+  // Switching between the calendar and an event swaps the whole page under a
+  // scroll position the browser has no reason to change. Open an event from
+  // halfway down the calendar and you land halfway down the checklist, which
+  // reads as the page jumping to a random milestone.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [selectedId])
+
   // Seed data stays immutable; owner edits are layered on top so "reset"
   // always has an original to fall back to. Status is computed last, from
   // whatever date is in effect after those edits.

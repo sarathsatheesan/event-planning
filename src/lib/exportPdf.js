@@ -1,5 +1,6 @@
 import { formatTime, offsetFromStart } from './records.js'
 import { formatDateRange } from '../data/events.js'
+import { rosterSummary } from './artists.js'
 
 // The four phases, in the order they appear in the app. `key` matches the
 // checkbox ids in the export dialog.
@@ -181,7 +182,7 @@ export async function exportEventPdf(event, selectedKeys) {
         ['Group', 'Artist roster', 'Members', 'Honorarium', 'Special requests', ''],
         artists.map((a) => [
           a.name || '(unnamed)',
-          (a.roster ?? []).join(', ') || '—',
+          rosterSummary(a.roster) || '—',
           a.headcount ?? '—',
           money(a.honorarium),
           a.requests || '—',
