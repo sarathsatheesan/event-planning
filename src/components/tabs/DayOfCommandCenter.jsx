@@ -59,7 +59,7 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
   }
 
   function removeItem(index) {
-    onRunOfShowChange(items.filter((_, i) => i !== index))
+    onRunOfShowChange(items.filter((_, i) => i !== index), 'Schedule item removed.')
   }
 
   function addItem() {

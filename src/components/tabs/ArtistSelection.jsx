@@ -173,12 +173,14 @@ export default function ArtistSelection({ event, onChange, currentUserEmail }) {
   }
 
   function handleRemove(artist) {
-    if (artist.posterPath) deleteArtistFile(artist.posterPath)
-    if (artist.bio?.path) deleteArtistFile(artist.bio.path)
+    // The poster and bio are deliberately left in the bucket. Removal is
+    // undoable, and an undo that restores a record pointing at deleted files
+    // is worse than no undo at all. Orphans cost fractions of a cent; a sweep
+    // for unreferenced files is cheap to add later.
     const patch = { artists: artists.filter((a) => a.id !== artist.id) }
     // Removing the chosen group must not leave a selection pointing at nothing.
     if (choice?.artistId === artist.id) patch.artistChoice = null
-    onChange(patch)
+    onChange(patch, 'Artist group removed.')
   }
 
   function handleConfirm(rationale) {

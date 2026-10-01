@@ -18,6 +18,7 @@ import {
 import Dashboard from './components/Dashboard.jsx'
 import EventDetail from './components/EventDetail.jsx'
 import AuthBar from './components/AuthBar.jsx'
+import MyWork from './components/MyWork.jsx'
 import { EditableProvider } from './lib/editing.js'
 
 // Inline fields fire on every keystroke. Writing each one straight to Firestore
@@ -33,6 +34,8 @@ export default function App() {
   const now = new Date()
 
   const [selectedId, setSelectedId] = useState(null)
+  const [view, setView] = useState('calendar')
+  // { message, undo } — undo is a function when the action can be taken back.
   const [toast, setToast] = useState(null)
   // With Firebase configured, Firestore is the only source of shared truth.
   // Seeding from localStorage would show a signed-out visitor stale edits from
@@ -44,10 +47,12 @@ export default function App() {
   const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false)
 
   const toastTimer = useRef(null)
-  const showToast = useCallback((message) => {
-    setToast(message)
+  // An undoable toast lingers: three and a half seconds is not long enough to
+  // notice a mistake, read the message and decide to take it back.
+  const showToast = useCallback((message, undo = null) => {
+    setToast({ message, undo })
     window.clearTimeout(toastTimer.current)
-    toastTimer.current = window.setTimeout(() => setToast(null), 3600)
+    toastTimer.current = window.setTimeout(() => setToast(null), undo ? 9000 : 3600)
   }, [])
 
   const allowed = canEdit(user)
@@ -156,12 +161,20 @@ export default function App() {
   const selectedEvent = events.find((e) => e.id === selectedId) ?? null
   const selectedSeed = seedEvents.find((e) => e.id === selectedId) ?? null
 
-  function handleClone(id) {
-    const src = events.find((e) => e.id === id)
-    showToast(`"${src.name}" cloned into a new draft for next year's cycle.`)
-  }
-
-  function handleEventChange(id, patch) {
+  /**
+   * Applies a patch to one event. Pass `undoLabel` for anything destructive:
+   * the prior value of every field being changed is captured first, and the
+   * toast offers to put it back. Firestore has no recycle bin, so this is the
+   * only thing standing between a mis-click and losing real work.
+   */
+  function handleEventChange(id, patch, undoLabel) {
+    if (undoLabel) {
+      const current = events.find((e) => e.id === id)
+      if (current) {
+        const before = Object.fromEntries(Object.keys(patch).map((k) => [k, current[k]]))
+        showToast(undoLabel, () => handleEventChange(id, before))
+      }
+    }
     setOverrides((prev) => {
       const next = { ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }
       if (cloud) queueWrite(id, next[id])
@@ -240,23 +253,47 @@ export default function App() {
             originalDate={selectedSeed?.date ?? selectedEvent.date}
             today={now}
             onBack={() => setSelectedId(null)}
-            onChange={(patch) => handleEventChange(selectedEvent.id, patch)}
+            onChange={(patch, undoLabel) =>
+              handleEventChange(selectedEvent.id, patch, undoLabel)
+            }
             onReset={() => handleEventReset(selectedEvent.id)}
             currentUserEmail={user?.email ?? null}
+          />
+        ) : view === 'work' ? (
+          <MyWork
+            events={events}
+            today={now}
+            onOpenEvent={setSelectedId}
+            view={view}
+            onViewChange={setView}
           />
         ) : (
           <Dashboard
             events={events}
             today={now}
             onSelectEvent={setSelectedId}
-            onCloneEvent={handleClone}
+            view={view}
+            onViewChange={setView}
           />
         )}
 
         {toast && (
           <div className="fixed inset-x-0 bottom-5 flex justify-center px-4">
-            <div className="rounded-full border border-border bg-ink px-4 py-2 text-sm font-medium text-paper shadow-lg">
-              {toast}
+            <div className="flex items-center gap-3 rounded-full border border-border bg-ink px-4 py-2 text-sm font-medium text-paper shadow-lg">
+              <span>{toast.message}</span>
+              {toast.undo && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const undo = toast.undo
+                    setToast(null)
+                    undo()
+                  }}
+                  className="focus-ring -mr-1 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-paper/90 underline underline-offset-2 transition hover:text-paper"
+                >
+                  Undo
+                </button>
+              )}
             </div>
           </div>
         )}

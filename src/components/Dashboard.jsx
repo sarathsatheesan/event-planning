@@ -3,7 +3,7 @@ import { formatTime } from '../lib/records.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EventArt from './EventArt.jsx'
-import { useEditable } from '../lib/editing.js'
+import ViewSwitch from './ViewSwitch.jsx'
 
 function daysUntil(dateStr, today) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -18,8 +18,7 @@ function TMinusLabel({ dateStr, today }) {
   return <span className="text-ink-soft">T&minus;{n}d</span>
 }
 
-export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }) {
-  const editable = useEditable()
+export default function Dashboard({ events, today, onSelectEvent, view, onViewChange }) {
   const live = events.filter((e) => e.status === 'Live Today').length
   const upcoming = events.filter((e) => e.status !== 'Completed' && e.status !== 'Live Today').length
   const avgReadiness = Math.round(
@@ -30,17 +29,20 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
-      <header className="mb-8 flex flex-col gap-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">
-          India Cultural Center of Utah
-        </p>
-        <h1 className="font-display text-4xl font-bold leading-none sm:text-5xl">
-          Annual Event Operations Hub
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink-soft">
-          Master calendar of recurring events — milestone tracking, Day-Of execution, and
-          year-over-year blueprints in one place.
-        </p>
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">
+            India Cultural Center of Utah
+          </p>
+          <h1 className="font-display text-4xl font-bold leading-none sm:text-5xl">
+            Annual Event Operations Hub
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-ink-soft">
+            Master calendar of recurring events — milestone tracking, Day-Of execution, and
+            year-over-year blueprints in one place.
+          </p>
+        </div>
+        <ViewSwitch view={view} onChange={onViewChange} />
       </header>
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -96,15 +98,6 @@ export default function Dashboard({ events, today, onSelectEvent, onCloneEvent }
                       <span className="italic">No lead assigned</span>
                     )}
                   </span>
-                  {editable && (
-                    <button
-                      type="button"
-                      onClick={() => onCloneEvent(event.id)}
-                      className="focus-ring rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-                    >
-                      Clone as template
-                    </button>
-                  )}
                 </div>
               </div>
             </li>

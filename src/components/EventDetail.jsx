@@ -167,7 +167,7 @@ export default function EventDetail({
         {activeTab === 'preevent' && (
           <PreEventPlanning
             event={event}
-            onChecklistChange={(checklist) => onChange({ checklist })}
+            onChecklistChange={(checklist, undoLabel) => onChange({ checklist }, undoLabel)}
           />
         )}
         {activeTab === 'artists' && (
@@ -177,14 +177,20 @@ export default function EventDetail({
           <DayOfCommandCenter
             event={event}
             today={today}
-            onRunOfShowChange={(runOfShow) => onChange({ runOfShow })}
+            onRunOfShowChange={(runOfShow, undoLabel) => onChange({ runOfShow }, undoLabel)}
           />
         )}
         {activeTab === 'vendors' && (
-          <VendorDirectory event={event} onVendorsChange={(vendors) => onChange({ vendors })} />
+          <VendorDirectory
+            event={event}
+            onVendorsChange={(vendors, undoLabel) => onChange({ vendors }, undoLabel)}
+          />
         )}
         {activeTab === 'wrapup' && (
-          <PostEventWrapUp event={event} onRetroChange={(retro) => onChange({ retro })} />
+          <PostEventWrapUp
+            event={event}
+            onRetroChange={(retro, undoLabel) => onChange({ retro }, undoLabel)}
+          />
         )}
       </div>
 

@@ -79,7 +79,7 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
   }
 
   function removeTask(id) {
-    onChecklistChange(tasks.filter((t) => t.id !== id))
+    onChecklistChange(tasks.filter((t) => t.id !== id), 'Milestone removed.')
   }
 
   function cycleStatus(id) {

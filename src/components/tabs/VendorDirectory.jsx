@@ -70,7 +70,10 @@ export default function VendorDirectory({ event, onVendorsChange }) {
                   className="mt-0.5 w-full text-xs text-ink-soft"
                 />
               </div>
-              <RemoveButton onClick={() => onVendorsChange(vendors.filter((_, j) => j !== i))} title="Remove this vendor" />
+              <RemoveButton
+                onClick={() => onVendorsChange(vendors.filter((_, j) => j !== i), 'Vendor removed.')}
+                title="Remove this vendor"
+              />
             </div>
 
             <dl className="mt-1 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 text-sm">

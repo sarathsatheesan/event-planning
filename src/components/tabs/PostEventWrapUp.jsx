@@ -138,7 +138,10 @@ export default function PostEventWrapUp({ event, onRetroChange }) {
               />
               <RemoveButton
                 onClick={() =>
-                  onRetroChange({ ...retro, sponsorAcks: sponsorAcks.filter((_, j) => j !== i) })
+                  onRetroChange(
+                    { ...retro, sponsorAcks: sponsorAcks.filter((_, j) => j !== i) },
+                    'Sponsor acknowledgment removed.'
+                  )
                 }
                 title="Remove this sponsor"
               />
