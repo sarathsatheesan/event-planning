@@ -4,6 +4,7 @@ import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EventArt from './EventArt.jsx'
 import ViewSwitch from './ViewSwitch.jsx'
+import { useEditable } from '../lib/editing.js'
 
 function daysUntil(dateStr, today) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -18,7 +19,8 @@ function TMinusLabel({ dateStr, today }) {
   return <span className="text-ink-soft">T&minus;{n}d</span>
 }
 
-export default function Dashboard({ events, today, onSelectEvent, view, onViewChange }) {
+export default function Dashboard({ events, today, onSelectEvent, view, onViewChange, onNewEvent }) {
+  const editable = useEditable()
   const live = events.filter((e) => e.status === 'Live Today').length
   const upcoming = events.filter((e) => e.status !== 'Completed' && e.status !== 'Live Today').length
   const avgReadiness = Math.round(
@@ -42,7 +44,18 @@ export default function Dashboard({ events, today, onSelectEvent, view, onViewCh
             year-over-year blueprints in one place.
           </p>
         </div>
-        <ViewSwitch view={view} onChange={onViewChange} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ViewSwitch view={view} onChange={onViewChange} />
+          {editable && (
+            <button
+              type="button"
+              onClick={onNewEvent}
+              className="focus-ring rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink transition"
+            >
+              New event
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">

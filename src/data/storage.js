@@ -27,9 +27,28 @@ export function saveOverrides(overrides) {
   }
 }
 
-/** Seed events with any saved owner edits applied on top. */
+/**
+ * Seed events with saved edits applied on top, plus any events the committee
+ * created themselves.
+ *
+ * A created event is stored in the same place as an edit — an entry whose id
+ * is not in the seed list, holding a whole event rather than a patch. That
+ * keeps one collection, one sync path and one set of security rules instead of
+ * a parallel world for user-made events.
+ *
+ * The name-and-date test matters: a half-written entry, or a leftover for a
+ * seed event that no longer exists, must not materialise as a ghost event on
+ * the calendar.
+ */
 export function applyOverrides(events, overrides) {
-  return events.map((event) =>
+  const edited = events.map((event) =>
     overrides[event.id] ? { ...event, ...overrides[event.id] } : event
   )
+
+  const seedIds = new Set(events.map((e) => e.id))
+  const created = Object.entries(overrides)
+    .filter(([id, value]) => !seedIds.has(id) && value?.name && value?.date)
+    .map(([id, value]) => ({ ...value, id, isCustom: true }))
+
+  return [...edited, ...created]
 }

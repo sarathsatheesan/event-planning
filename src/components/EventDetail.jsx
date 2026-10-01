@@ -39,6 +39,7 @@ export default function EventDetail({
   onBack,
   onChange,
   onReset,
+  onDelete,
   currentUserEmail,
 }) {
   const editable = useEditable()
@@ -61,13 +62,26 @@ export default function EventDetail({
         >
           <span aria-hidden="true">&larr;</span> All events
         </button>
-        <button
-          type="button"
-          onClick={() => setExporting(true)}
-          className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-        >
-          Export PDF
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Only events the committee created can be deleted. A seed event
+              would simply reappear, since the seed list is immutable. */}
+          {editable && onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="focus-ring rounded-md px-2.5 py-1.5 text-xs font-semibold text-ink-soft transition hover:bg-critical-soft hover:text-critical"
+            >
+              Delete event
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setExporting(true)}
+            className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+          >
+            Export PDF
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 overflow-hidden rounded-xl border border-border bg-surface">

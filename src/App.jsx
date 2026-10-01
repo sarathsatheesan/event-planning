@@ -19,6 +19,8 @@ import Dashboard from './components/Dashboard.jsx'
 import EventDetail from './components/EventDetail.jsx'
 import AuthBar from './components/AuthBar.jsx'
 import MyWork from './components/MyWork.jsx'
+import NewEventDialog from './components/NewEventDialog.jsx'
+import { buildEvent, newEventId } from './data/blueprint.js'
 import { EditableProvider } from './lib/editing.js'
 
 // Inline fields fire on every keystroke. Writing each one straight to Firestore
@@ -34,6 +36,7 @@ export default function App() {
   const now = new Date()
 
   const [selectedId, setSelectedId] = useState(null)
+  const [creating, setCreating] = useState(false)
   const [view, setView] = useState('calendar')
   // { message, undo } — undo is a function when the action can be taken back.
   const [toast, setToast] = useState(null)
@@ -162,6 +165,43 @@ export default function App() {
   const selectedSeed = seedEvents.find((e) => e.id === selectedId) ?? null
 
   /**
+   * A created event is stored exactly like an edit, under an id that is not in
+   * the seed list. See applyOverrides for why that is one mechanism and not two.
+   */
+  function handleCreateEvent({ name, date, sourceId }) {
+    const source = sourceId ? events.find((e) => e.id === sourceId) : null
+    const id = newEventId()
+    const record = buildEvent({ name, date, source })
+    setOverrides((prev) => {
+      if (cloud) queueWrite(id, record)
+      return { ...prev, [id]: record }
+    })
+    setCreating(false)
+    setSelectedId(id)
+    showToast(source ? `"${record.name}" created from ${source.name}.` : `"${record.name}" created.`)
+  }
+
+  /** Only events the committee made can be deleted; seed events would return. */
+  function handleDeleteEvent(id) {
+    const removed = overrides[id]
+    if (!removed) return
+    setSelectedId(null)
+    setOverrides((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      if (cloud) queueWrite(id, null)
+      return next
+    })
+    showToast(`"${removed.name}" deleted.`, () => {
+      setOverrides((prev) => {
+        if (cloud) queueWrite(id, removed)
+        return { ...prev, [id]: removed }
+      })
+      setSelectedId(id)
+    })
+  }
+
+  /**
    * Applies a patch to one event. Pass `undoLabel` for anything destructive:
    * the prior value of every field being changed is captured first, and the
    * toast offers to put it back. Firestore has no recycle bin, so this is the
@@ -257,6 +297,7 @@ export default function App() {
               handleEventChange(selectedEvent.id, patch, undoLabel)
             }
             onReset={() => handleEventReset(selectedEvent.id)}
+            onDelete={selectedEvent.isCustom ? () => handleDeleteEvent(selectedEvent.id) : null}
             currentUserEmail={user?.email ?? null}
           />
         ) : view === 'work' ? (
@@ -274,6 +315,15 @@ export default function App() {
             onSelectEvent={setSelectedId}
             view={view}
             onViewChange={setView}
+            onNewEvent={() => setCreating(true)}
+          />
+        )}
+
+        {creating && (
+          <NewEventDialog
+            events={events}
+            onCreate={handleCreateEvent}
+            onClose={() => setCreating(false)}
           />
         )}
 

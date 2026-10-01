@@ -30,7 +30,7 @@ drops.
 
 Ranked by how soon each one causes real damage.
 
-### 1. "Clone as template" was a lie — *fixed 1 Oct 2026*
+### 1. "Clone as template" was a lie — *fixed, then properly built 1 Oct 2026*
 
 The button showed a toast saying the event had been cloned for next year's
 cycle. It cloned nothing; the handler only called `showToast`. The product's
@@ -38,10 +38,23 @@ own tagline promises year-over-year blueprints and the feature delivering that
 was a no-op with a **false success confirmation**, which is worse than no
 feature at all — someone would have relied on it.
 
-Removed rather than patched. Real cloning requires events that users create,
-and the current model layers overrides on top of an immutable seed list
-(`applyOverrides(seedEvents, overrides)`), so a new event has nowhere to live.
-That is a storage-model change, scheduled below.
+It was removed first, because real cloning needed events that users create and
+the model layered overrides on an immutable seed list, so a new event had
+nowhere to live.
+
+That storage-model change has now landed, and the capability came back in a
+better shape. **New event** on the calendar offers a *start from* choice: the
+standard 23-milestone blueprint, or any previous event. Copying an event brings
+across its checklist, run of show, vendor contacts, venue, owners, categories
+and theme, re-spaces every due date around the new event date, and resets every
+status to Not Started. A multi-day run keeps its length rather than its old
+dates. What deliberately does **not** carry over: budget spend, the wrap-up,
+artist candidates and the artist decision — a new cycle means new quotes and an
+unwritten retrospective. Vendor balances reset to zero, since last year's
+outstanding payment is not this year's problem.
+
+Created events can be deleted, with undo. Seed events cannot — they would
+simply reappear. Archiving them is noted below.
 
 ### 2. The Day-Of Command Center cannot be used by the people it was built for
 
@@ -121,6 +134,7 @@ each tile?" came up — that is the evidence.
 | ~~Remove the false clone control~~ ✅ | Correctness; it actively misinforms |
 | ~~Undo on destructive actions~~ ✅ | Cheapest protection against the worst outcome |
 | ~~My Work cross-event view~~ ✅ | Answers the chair's daily question |
+| ~~Create events, from a template or blank~~ ✅ | Delivers the year-over-year promise |
 | Committee management in-app | Removes the developer dependency for an admin task |
 | Notifications and weekly digests | Converts a record into a system that drives work |
 
@@ -131,9 +145,13 @@ each tile?" came up — that is the evidence.
   phone numbers.
 - **Offline-tolerant day-of mode.** Queue status changes locally, sync on
   reconnect, show pending state honestly.
-- **Real cloning.** Requires user-created events: a storage-model change so
-  events can exist outside the seed list. Then roll dates to next year's
-  equivalent weekday, carry checklist and vendors, reset statuses.
+- **Archiving seed events.** Created events can be deleted; the fifteen seed
+  events cannot, because the seed list is immutable and a deleted one would
+  come back on the next load. An `archived` flag on the override would hide a
+  retired event without rewriting the seed.
+- **Recurrence rules.** India Mela is "the first Sunday of June"; Independence
+  Day is a fixed date. Creating next year's event still means picking the date
+  by hand. Worth encoding once the calendar spans more cycles.
 
 ### Later
 
@@ -166,8 +184,14 @@ each tile?" came up — that is the evidence.
 
 - **Seed plus overrides.** `src/data/events.js` is immutable seed data;
   `eventOverrides/{eventId}` in Firestore holds the edits, layered at render by
-  `applyOverrides`. This is why "reset" always has an original to fall back to,
-  and why new events cannot yet exist.
+  `applyOverrides`. This is why "reset" always has an original to fall back to.
+- **Created events live in the same collection.** An entry whose id is not in
+  the seed list holds a whole event rather than a patch, and `applyOverrides`
+  materialises it. One collection, one sync path, one set of security rules
+  instead of a parallel world for user-made events — and no rules change was
+  needed to ship it. The guard is that an entry must carry both a name and a
+  date before it becomes an event, so a half-written document cannot appear on
+  the calendar as a ghost.
 - **One document per event**, deliberately: two people editing different events
   would otherwise contend, and India Mela's 130-task checklist would push a
   combined document toward Firestore's 1MB limit.
