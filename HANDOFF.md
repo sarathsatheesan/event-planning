@@ -1,6 +1,12 @@
 # EventOps — handoff
 
-India Cultural Center of Utah · last updated 1 October 2026 · HEAD `e776962`
+India Cultural Center of Utah · last updated 1 October 2026, with the per-person
+reminders change · `main`
+
+<!-- No commit hash here on purpose: this file is edited in the same commit it
+     would name, so any hash written above is wrong the moment it is committed.
+     Use `git log -1 --format=%h -- HANDOFF.md` for the commit that last
+     touched it. -->
 
 Operational state and the things that cost time to learn. Product direction and
 the ranked gap list live in [ROADMAP.md](./ROADMAP.md); this file is for
@@ -40,18 +46,27 @@ whoever has to run, deploy or debug the thing.
 Both 2nd gen, Node 22, `us-central1` — the client calls that region explicitly,
 so a region change needs the client updated or calls 404.
 
-- `weeklyDigest` — Cloud Scheduler, `0 8 * * 1` **America/Denver**. Overdue and
-  due-within-7-days grouped by owner, plus events within 14 days.
+- `weeklyDigest` — Cloud Scheduler, `0 8 * * 1` **America/Denver**. Sends
+  **one email per committee member** containing only their own overdue and
+  due-within-7-days milestones, grouped by event; then **one shared overview to
+  admins** (grouped by owner, plus events within 14 days). A member with nothing
+  due gets nothing. Both are `buildDigest` — the personal one with `forPerson`.
 - `sendDigestNow` — callable, admin-only, from **My work → Email the
-  committee**. Shares `deliverDigest` with the schedule so the manual email
-  cannot differ from the automatic one. Two-minute cooldown.
+  committee**. Still the **shared** list to the whole roster, which is what that
+  button is for. Two-minute cooldown.
 
 Digest windows: **7 days** forward for tasks, **14 days** for events,
 **unbounded** backwards for overdue, **12 rows** shown per section. Completed
 events excluded unless the manual send asks for "Everything".
 
-Mail goes **to** the ICC inbox with the committee **bcc'd** — not thirty
-addresses in the To line.
+The shared overview goes **to** the ICC inbox with the committee **bcc'd** —
+not thirty addresses in the To line. A personal reminder goes straight **to**
+that one person with `replyTo` on the ICC inbox and nobody copied.
+
+A partially failed weekly run is **not** retried: the schedule throws only when
+every send failed. Retrying a partial run would re-send to everyone who already
+got theirs, and a duplicate reminder costs more trust than a missed one. Failed
+addresses are in the logs — search `Reminder send failed`.
 
 ---
 

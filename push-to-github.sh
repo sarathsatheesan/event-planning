@@ -24,6 +24,8 @@ echo "==> Working in: $(pwd)"
 # lock files and a half-finished rebase behind. Your shell can clear them.
 if [ -d .git ]; then
   rm -f .git/index.lock .git/HEAD.lock .git/objects/maintenance.lock
+  # The bridge can only move a lock aside, never delete it, so it parks them here.
+  rm -rf .git/_stale
   rm -rf .git/rebase-merge .git/rebase-apply
   find .git/objects -name 'tmp_obj_*' -delete 2>/dev/null || true
   echo "==> Cleared any stale git locks"

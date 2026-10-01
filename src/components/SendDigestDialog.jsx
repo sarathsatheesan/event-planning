@@ -4,9 +4,13 @@ import { useEffect, useState } from 'react'
  * Confirms an ad-hoc send.
  *
  * Sending is not undoable and it spends the committee's attention, so it asks
- * once and says exactly who will receive it. The same email the Monday
- * schedule would produce — there is one code path, so a manual push cannot
- * quietly differ from the automatic one.
+ * once and says exactly who will receive it.
+ *
+ * This is the shared list — one email, everyone's work on it. The Monday run
+ * does something different now: each member gets only their own milestones and
+ * admins get this overview as well. Both are built by the same function from
+ * the same data, so the two can disagree about what is due only if the calendar
+ * changed in between.
  */
 export default function SendDigestDialog({ recipientCount, busy, onSend, onClose }) {
   const [scope, setScope] = useState('upcoming')
@@ -21,7 +25,8 @@ export default function SendDigestDialog({ recipientCount, busy, onSend, onClose
     {
       key: 'upcoming',
       label: 'This week',
-      detail: 'Overdue and due within 7 days, plus events in the next fortnight. What the Monday email sends.',
+      detail:
+        'Overdue and due within 7 days, plus events in the next fortnight. Everyone sees the whole list, including what nobody owns.',
     },
     {
       key: 'all',
@@ -73,7 +78,8 @@ export default function SendDigestDialog({ recipientCount, busy, onSend, onClose
 
         <p className="mt-3 text-xs text-ink-soft">
           If there is nothing overdue, due soon or coming up, no email is sent and you will be told
-          so.
+          so. Separately, every Monday each member is emailed their own milestones — this button
+          sends the shared list to everyone.
         </p>
 
         <div className="mt-5 flex justify-end gap-2">

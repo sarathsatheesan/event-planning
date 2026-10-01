@@ -43,3 +43,22 @@ export function buildMessage({ from, inbox, recipients, digest }) {
     html: digest.html,
   }
 }
+
+/**
+ * One person's own reminder: straight to them, nobody else on it.
+ *
+ * replyTo points at the ICC inbox rather than the sending address so that
+ * "that's not mine" lands somewhere a human reads, not in an automation's
+ * mailbox. No bcc — a personal list is personal, and seeing a hidden copy go
+ * somewhere else is how people stop trusting a reminder.
+ */
+export function buildPersonalMessage({ from, inbox, to, digest }) {
+  return {
+    from,
+    to,
+    replyTo: inbox,
+    subject: digest.subject,
+    text: digest.text,
+    html: digest.html,
+  }
+}

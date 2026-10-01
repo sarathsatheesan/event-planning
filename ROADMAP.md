@@ -140,8 +140,35 @@ automatically, and one that does not — "Chinmy", say — is kept and labelled
 rather than wiped. With no roster loaded the field falls back to the free-text
 box it replaced, because a dropdown with nothing in it cannot be used.
 
-This is also the prerequisite for per-person reminders, which the whole-committee
-digest deliberately does not yet attempt.
+This was the prerequisite for per-person reminders, shipped below.
+
+
+### 3c. One list for thirteen people — *fixed 1 Oct 2026*
+
+The weekly digest mailed the identical committee-wide list to everybody, which
+made every reminder somebody else's problem: thirty-one overdue milestones read
+as organisational background noise rather than as four things you personally
+owe.
+
+The Monday run now sends **each member only their own milestones**, grouped by
+event and nearest deadline first, and **admins additionally get the shared
+overview** — because spotting what nobody owns is their job and it appears on no
+individual's list. A member with nothing due gets no email at all; silence has
+to mean something or the reminder that matters gets filed with the rest.
+
+Both emails come from one `buildDigest` call path with a `forPerson` option, so
+the personal list and the overview cannot disagree about what "overdue" means.
+Ownership is resolved by address when the milestone was assigned from the roster
+picker, and by **exact** name match otherwise — the stale typed names are the
+ones most worth chasing, but "Hari" must never collect "Hari Prasad"'s work.
+
+Capping had to change too. Filling twelve rows greedily spent all of them on one
+event and hid nineteen items belonging to three others, so a personal section now
+reserves two rows per event before anything is filled greedily. The overview
+keeps the greedy order: the person who owes the most is read first.
+
+**Ad-hoc "Email the committee" is unchanged** — that button is for "everyone look
+at this", and it still sends the shared list to the whole roster.
 
 ### 4. No cross-event view — *first version shipped 1 Oct 2026*
 
@@ -249,13 +276,14 @@ each tile?" came up — that is the evidence.
 | ~~Committee management in-app~~ ✅ | Removes the developer dependency for an admin task |
 | ~~Notifications and weekly digests~~ ✅ | Converts a record into a system that drives work |
 | ~~Assignees linked to committee accounts~~ ✅ | Gives a task an address, not just a name |
+| ~~Per-person weekly reminders~~ ✅ | Makes the reminder somebody's, not everybody's |
 
 ### Next
 
-- **Per-person reminders.** Now unblocked: milestones carry an owner's address.
-  Each member gets their own list; admins additionally get the full picture.
-- **Backfill the owners.** Thirty-one overdue milestones have nobody on them.
-  The picker makes assigning them quick, but somebody has to do it once.
+- **Backfill the owners.** Thirty-one overdue milestones have nobody on them,
+  so today the per-person run would send **nobody** anything and only the admin
+  overview would go out. The picker makes assigning them quick, but somebody has
+  to do it once, and until then the feature is inert.
 - **Public read-only day-of view.** A per-event share link or PIN exposing only
   the run of show. Unblocks volunteers without opening the vendor directory's
   phone numbers.

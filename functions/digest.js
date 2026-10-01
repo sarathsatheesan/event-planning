@@ -1,9 +1,20 @@
-// What the weekly email says.
+// What the reminder emails say.
 //
 // Kept free of Firestore and of firebase-functions so it can be run against
 // the real calendar in a test without deploying anything — the formatting of
 // an email nobody can see until it arrives is exactly the kind of thing that
 // rots silently.
+//
+// One builder produces both shapes of email:
+//
+//   buildDigest({ events, today })                  the committee overview,
+//                                                   grouped by who owes what
+//   buildDigest({ events, today, forPerson })       one person's own list,
+//                                                   grouped by event
+//
+// Deliberately not two functions. The committee overview and the personal
+// reminder have to agree about what "overdue" means, where the week ends and
+// how a date reads, and the only way to guarantee that is to compute it once.
 
 const SOON_DAYS = 7
 const HORIZON_DAYS = 14
@@ -44,40 +55,94 @@ function escape(text) {
   )
 }
 
+function firstName(person) {
+  const name = (person?.name ?? '').trim()
+  return name ? name.split(/\s+/)[0] : ''
+}
+
 /**
- * Walks owner groups in order, emitting at most `limit` rows in total and
- * reporting what was left out. Truncating whole owners instead would hide
- * someone's work entirely, which is worse than showing them a short list.
+ * Is this milestone this person's?
+ *
+ * An address when the milestone was assigned from the roster. Milestones
+ * assigned before the picker existed carry a typed name and no address at all,
+ * and those are exactly the stale ones most worth chasing — so an exact,
+ * case-insensitive name match counts too. Exact and nothing looser: "Hari" must
+ * not pull in "Hari Prasad", because a reminder sent to the wrong person is
+ * worse than one not sent.
+ *
+ * This mirrors how PersonField resolves a typed name back to a member when it
+ * displays one. The two have to agree: a name the app shows as Pavithra's is a
+ * name Pavithra should be reminded about.
  */
-function capped(groups, limit) {
-  const shown = []
+function ownsRow(row, person) {
+  const email = (person?.email ?? '').trim().toLowerCase()
+  if (row.ownerEmail) return !!email && String(row.ownerEmail).toLowerCase() === email
+  const name = (person?.name ?? '').trim().toLowerCase()
+  return !!name && row.owner.toLowerCase() === name
+}
+
+/**
+ * Trims a section to `limit` rows and reports what was left out.
+ *
+ * Greedy by default, which is right for the committee overview: the person who
+ * owes the most is read first and is the one worth seeing in full.
+ *
+ * A personal list is read the other way round. Greedy filling there spent all
+ * twelve rows on one event and hid nineteen items belonging to three others, so
+ * the reader learned about one deadline and had no idea the rest existed.
+ * `minPerGroup` reserves a slice for every group first, so every event the
+ * person owes anything on at least shows up with its count.
+ */
+function capped(groups, limit, { minPerGroup = 0 } = {}) {
+  const takes = groups.map(() => 0)
   let remaining = limit
-  let hidden = 0
-  for (const [owner, items] of groups) {
-    if (remaining <= 0) {
-      hidden += items.length
-      continue
-    }
-    shown.push([owner, items.slice(0, remaining), items.length])
-    hidden += Math.max(0, items.length - remaining)
-    remaining -= Math.min(items.length, remaining)
+  for (let i = 0; minPerGroup > 0 && i < groups.length && remaining > 0; i++) {
+    takes[i] = Math.min(minPerGroup, groups[i][1].length, remaining)
+    remaining -= takes[i]
   }
+  for (let i = 0; i < groups.length && remaining > 0; i++) {
+    const extra = Math.min(groups[i][1].length - takes[i], remaining)
+    takes[i] += extra
+    remaining -= extra
+  }
+  const shown = []
+  let hidden = 0
+  groups.forEach(([key, items], i) => {
+    if (takes[i] > 0) shown.push([key, items.slice(0, takes[i]), items.length])
+    hidden += items.length - takes[i]
+  })
   return { shown, hidden }
 }
 
-function groupByOwner(rows) {
-  const byOwner = new Map()
+function group(rows, keyOf) {
+  const map = new Map()
   for (const row of rows) {
-    if (!byOwner.has(row.owner)) byOwner.set(row.owner, [])
-    byOwner.get(row.owner).push(row)
+    const key = keyOf(row)
+    if (!map.has(key)) map.set(key, [])
+    map.get(key).push(row)
   }
+  return map
+}
+
+function groupByOwner(rows) {
   // Most owed first; Unassigned last, because it is nobody's inbox problem
   // until somebody claims it.
-  return [...byOwner.entries()].sort((a, b) => {
+  return [...group(rows, (r) => r.owner).entries()].sort((a, b) => {
     if (a[0] === 'Unassigned') return 1
     if (b[0] === 'Unassigned') return -1
     return b[1].length - a[1].length || a[0].localeCompare(b[0])
   })
+}
+
+/**
+ * For one person, "who owns this" is not the question — they all do. Group by
+ * event instead, nearest deadline first, so the list reads as an order of work
+ * rather than a pile.
+ */
+function groupByEvent(rows) {
+  return [...group(rows, (r) => r.event).entries()].sort(
+    (a, b) => a[1][0].due.localeCompare(b[1][0].due) || a[0].localeCompare(b[0])
+  )
 }
 
 /**
@@ -94,6 +159,9 @@ export function buildDigest({
   // for everything, including events already behind us, which is useful when
   // someone wants the full picture rather than this week's.
   includeCompleted = false,
+  // { email, name } to build one person's own list instead of the committee
+  // overview. Omit for the overview.
+  forPerson = null,
 }) {
   const stamp = dayStamp(today)
   const live = includeCompleted
@@ -110,14 +178,14 @@ export function buildDigest({
       const row = {
         owner: ownerOf(task.assignee),
         // Present once the milestone was assigned from the roster rather than
-        // typed. Unused by this digest, which goes to the whole committee, but
-        // it is what a per-person reminder will be addressed with.
+        // typed. This is what a personal reminder is addressed with.
         ownerEmail: task.assigneeEmail ?? null,
         task: task.task || '(untitled)',
         event: event.name,
         due: task.due,
         delta,
       }
+      if (forPerson && !ownsRow(row, forPerson)) continue
       if (delta < 0) overdue.push(row)
       else if (delta <= SOON_DAYS) soon.push(row)
     }
@@ -128,21 +196,43 @@ export function buildDigest({
     .filter((e) => e.inDays >= 0 && e.inDays <= HORIZON_DAYS)
     .sort((a, b) => a.inDays - b.inDays)
 
-  if (overdue.length === 0 && soon.length === 0 && upcoming.length === 0) return null
+  if (forPerson) {
+    // A personal reminder with no work in it is noise, however busy the
+    // calendar is. The committee overview is the place for "the Mela is in nine
+    // days and nobody owns anything"; an individual's inbox is not.
+    if (overdue.length === 0 && soon.length === 0) return null
+  } else if (overdue.length === 0 && soon.length === 0 && upcoming.length === 0) {
+    return null
+  }
 
   const byDue = (a, b) => a.due.localeCompare(b.due)
   overdue.sort(byDue)
   soon.sort(byDue)
 
-  const subject =
+  const counted =
     overdue.length > 0
-      ? `EventOps: ${overdue.length} overdue, ${soon.length} due this week`
-      : soon.length > 0
-        ? `EventOps: ${soon.length} due this week`
-        : `EventOps: ${upcoming[0].name} is ${upcoming[0].inDays === 0 ? 'today' : `in ${upcoming[0].inDays} days`}`
+      ? `${overdue.length} overdue, ${soon.length} due this week`
+      : `${soon.length} due this week`
+
+  const subject = forPerson
+    ? `EventOps: your ${counted}`
+    : overdue.length > 0 || soon.length > 0
+      ? `EventOps: ${counted}`
+      : `EventOps: ${upcoming[0].name} is ${upcoming[0].inDays === 0 ? 'today' : `in ${upcoming[0].inDays} days`}`
+
+  // In the committee overview a row has to say whose it is and which event; in
+  // a personal one the group heading is already the event and the owner is the
+  // reader, so repeating either just makes the line harder to scan.
+  const grouped = forPerson ? groupByEvent : groupByOwner
+  const capping = { minPerGroup: forPerson ? 2 : 0 }
+  const trailing = forPerson ? () => '' : (row) => row.event
 
   // ---- plain text, for clients that prefer it and for the test to read ----
   const lines = []
+  if (forPerson) {
+    const hi = firstName(forPerson)
+    lines.push(hi ? `${hi} — here is your list.` : 'Here is your list.', '')
+  }
   if (upcoming.length) {
     lines.push('COMING UP')
     for (const e of upcoming) {
@@ -156,11 +246,12 @@ export function buildDigest({
   ]) {
     if (!rows.length) continue
     lines.push(`${label} (${rows.length})`)
-    const { shown, hidden } = capped(groupByOwner(rows), MAX_ROWS_PER_SECTION)
-    for (const [owner, items, total] of shown) {
-      lines.push(`  ${owner} — ${total}`)
+    const { shown, hidden } = capped(grouped(rows), MAX_ROWS_PER_SECTION, capping)
+    for (const [key, items, total] of shown) {
+      lines.push(`  ${key} — ${total}`)
       for (const it of items) {
-        lines.push(`    ${longDate(it.due)}  ${it.task}  [${it.event}]`)
+        const tail = trailing(it)
+        lines.push(`    ${longDate(it.due)}  ${it.task}${tail ? `  [${tail}]` : ''}`)
       }
     }
     if (hidden > 0) lines.push(`  …and ${hidden} more — open EventOps to see them all`)
@@ -172,12 +263,12 @@ export function buildDigest({
   // ---- html ----
   const section = (title, rows, colour) => {
     if (!rows.length) return ''
-    const { shown, hidden } = capped(groupByOwner(rows), MAX_ROWS_PER_SECTION)
+    const { shown, hidden } = capped(grouped(rows), MAX_ROWS_PER_SECTION, capping)
     const groups = shown
       .map(
-        ([owner, items, total]) => `
+        ([key, items, total]) => `
         <tr><td style="padding:14px 0 4px;font:600 13px system-ui,sans-serif;color:#12151c">
-          ${escape(owner)} <span style="color:#6e7684;font-weight:400">· ${total}</span>
+          ${escape(key)} <span style="color:#6e7684;font-weight:400">· ${total}</span>
         </td></tr>
         ${items
           .map(
@@ -185,7 +276,7 @@ export function buildDigest({
         <tr><td style="padding:3px 0 3px 12px;font:400 13px system-ui,sans-serif;color:#12151c">
           <span style="display:inline-block;min-width:92px;color:#6e7684;font-family:ui-monospace,monospace;font-size:12px">${escape(longDate(it.due))}</span>
           ${escape(it.task)}
-          <span style="color:#6e7684">· ${escape(it.event)}</span>
+          ${trailing(it) ? `<span style="color:#6e7684">· ${escape(trailing(it))}</span>` : ''}
         </td></tr>`
           )
           .join('')}`
@@ -214,6 +305,21 @@ export function buildDigest({
        </td></tr>`
     : ''
 
+  const heading = forPerson
+    ? 'Your week in EventOps'
+    : includeCompleted
+      ? 'Everything in EventOps'
+      : 'This week in EventOps'
+
+  const greeting =
+    forPerson && firstName(forPerson)
+      ? `<div style="font:400 13px system-ui,sans-serif;color:#6e7684;padding-top:4px">Hi ${escape(firstName(forPerson))} — ${escape(counted)}, grouped by event.</div>`
+      : ''
+
+  const footer = forPerson
+    ? 'You are getting this because these milestones are assigned to you. Reassign one in EventOps and it moves to their list instead.'
+    : "The committee's shared list: everyone's milestones, including the ones nobody owns yet. Manage who is on the committee in EventOps."
+
   const html = `<!doctype html>
 <html>
 <head>
@@ -227,7 +333,8 @@ export function buildDigest({
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #dde0e7;border-radius:12px">
     <tr><td style="padding:20px 22px">
       <div style="font:700 11px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2f5fed">India Cultural Center of Utah</div>
-      <div style="font:700 20px system-ui,sans-serif;color:#12151c;padding-top:2px">${includeCompleted ? 'Everything in EventOps' : 'This week in EventOps'}</div>
+      <div style="font:700 20px system-ui,sans-serif;color:#12151c;padding-top:2px">${heading}</div>
+      ${greeting}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
         ${upcomingHtml}
         ${section('Overdue', overdue, '#d1372f')}
@@ -237,11 +344,16 @@ export function buildDigest({
         <a href="${escape(siteUrl)}" style="display:inline-block;background:#2f5fed;color:#ffffff;font:600 13px system-ui,sans-serif;text-decoration:none;padding:9px 14px;border-radius:6px">Open EventOps</a>
       </div>
       <div style="padding-top:16px;font:400 11px system-ui,sans-serif;color:#6e7684">
-        Sent weekly to the ICC events committee. Manage who receives this in the Committee screen.
+        ${footer}
       </div>
     </td></tr>
   </table>
 </body></html>`
 
-  return { subject, text, html, counts: { overdue: overdue.length, soon: soon.length, upcoming: upcoming.length } }
+  return {
+    subject,
+    text,
+    html,
+    counts: { overdue: overdue.length, soon: soon.length, upcoming: upcoming.length },
+  }
 }

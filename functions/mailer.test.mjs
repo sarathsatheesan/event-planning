@@ -1,4 +1,4 @@
-import { buildMessage, makeTransport } from './mailer.js'
+import { buildMessage, buildPersonalMessage, makeTransport } from './mailer.js'
 
 let fails = 0
 const check = (label, actual, expected) => {
@@ -21,6 +21,18 @@ check('both bodies present', Boolean(msg.text && msg.html), true)
 check('committee is bcc, not to', Array.isArray(msg.bcc) && msg.bcc.length === 3, true)
 check('to is the ICC inbox only', msg.to, 'utahindiacc@gmail.com')
 check('no recipient leaks into to', String(msg.to).includes('icc.org'), false)
+
+console.log('\n--- a personal reminder ---')
+const personal = buildPersonalMessage({
+  from: 'ICC EventOps <utahindiacc@gmail.com>',
+  inbox: 'utahindiacc@gmail.com',
+  to: 'hari@icc.org',
+  digest: { subject: 'EventOps: your 2 overdue', text: 'yours', html: '<p>yours</p>' },
+})
+check('addressed to them', personal.to, 'hari@icc.org')
+check('nobody is copied', personal.bcc === undefined && personal.cc === undefined, true)
+check('replies reach the ICC inbox', personal.replyTo, 'utahindiacc@gmail.com')
+check('subject is theirs', personal.subject, 'EventOps: your 2 overdue')
 
 console.log('\n--- transport ---')
 const t = makeTransport({ user: 'u@example.com', pass: 'hunter2' })

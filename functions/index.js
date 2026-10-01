@@ -8,7 +8,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { events as seedEvents, deriveStatus } from './seed/events.js'
 import { applyOverrides } from './seed/storage.js'
 import { buildDigest } from './digest.js'
-import { makeTransport, buildMessage } from './mailer.js'
+import { makeTransport, buildMessage, buildPersonalMessage } from './mailer.js'
 
 initializeApp()
 const db = getFirestore()
@@ -48,9 +48,38 @@ async function readEvents() {
 }
 
 /**
- * Builds and sends the digest. Shared by the Monday schedule and the manual
- * send, so the email somebody pushes out by hand is byte-for-byte the one they
- * would have received anyway — no second code path to drift.
+ * [{ email, name }] — the same shape, and the same fallback, as toMembers() in
+ * the app. A roster written before names were collected has `emails` only, and
+ * those members still need reminding; they just get no first name on it.
+ */
+function rosterMembers(roster) {
+  const rows = roster?.members?.length
+    ? roster.members
+    : (roster?.emails ?? []).map((email) => ({ email, name: '' }))
+  return rows
+    .filter((m) => m?.email)
+    .map((m) => ({
+      email: String(m.email).trim().toLowerCase(),
+      name: (m.name ?? '').trim(),
+    }))
+    .filter((m) => m.email)
+}
+
+function adminsOf(roster) {
+  const listed = (roster?.admins ?? []).map((e) => String(e).trim().toLowerCase())
+  const known = new Set(rosterMembers(roster).map((m) => m.email))
+  // A bootstrap admin who is not on the roster still gets the overview — that
+  // address is how the committee list gets repaired when it is wrong.
+  return [...new Set([...listed, ...BOOTSTRAP_ADMINS])].filter(
+    (e) => e && (known.has(e) || BOOTSTRAP_ADMINS.includes(e))
+  )
+}
+
+/**
+ * Builds and sends the committee-wide overview. Shared by the manual send and
+ * by the Monday run's admin copy, so the email somebody pushes out by hand is
+ * byte-for-byte the one they would have received anyway — no second code path
+ * to drift.
  */
 async function deliverDigest({ includeCompleted = false, trigger }) {
   const roster = await readRoster()
@@ -97,6 +126,96 @@ async function deliverDigest({ includeCompleted = false, trigger }) {
 }
 
 /**
+ * The Monday run: everybody gets their own list, admins also get the whole
+ * picture.
+ *
+ * The old behaviour mailed the identical committee-wide list to all thirteen
+ * people, which made every reminder somebody else's problem — thirty-one
+ * overdue milestones read as organisational background noise rather than as
+ * four things you personally owe. A list addressed to one person is a list that
+ * person can finish. Admins still need the overview, because spotting what
+ * nobody owns is their job and it appears on no individual's list.
+ *
+ * Members with nothing due get no email at all. That is the point: silence has
+ * to mean something, or the reminder that matters gets filed with the rest.
+ */
+async function deliverPersonalDigests({ trigger }) {
+  const roster = await readRoster()
+  const members = rosterMembers(roster)
+  if (members.length === 0) {
+    logger.warn('No committee roster — nothing sent.', { trigger })
+    return { sent: 0, failed: 0, reason: 'no-roster' }
+  }
+
+  const events = await readEvents()
+  const today = new Date()
+
+  const personal = members
+    .map((member) => ({ member, digest: buildDigest({ events, today, forPerson: member }) }))
+    .filter((row) => row.digest)
+
+  const admins = adminsOf(roster)
+  const overview = admins.length > 0 ? buildDigest({ events, today }) : null
+
+  if (personal.length === 0 && !overview) {
+    logger.info('Nothing to report — not sending.', { trigger, members: members.length })
+    return { sent: 0, failed: 0, reason: 'nothing-to-report' }
+  }
+
+  const from = MAIL_FROM.value()
+  const inbox = SMTP_USER.value()
+  const transport = makeTransport({ user: inbox, pass: SMTP_PASSWORD.value() })
+
+  let sent = 0
+  let failed = 0
+  // Only the reason, never the message or the transport: either would put the
+  // password into Cloud Logging.
+  const attempt = async (message, who) => {
+    try {
+      await transport.sendMail(message)
+      sent++
+    } catch (err) {
+      failed++
+      logger.error('Reminder send failed', { trigger, to: who, reason: err?.message ?? 'unknown' })
+    }
+  }
+
+  try {
+    // Sequential, on one connection. Thirteen messages is nothing to Gmail, and
+    // a burst of parallel authentications is what gets a sender throttled.
+    for (const { member, digest } of personal) {
+      await attempt(buildPersonalMessage({ from, inbox, to: member.email, digest }), member.email)
+    }
+    if (overview) {
+      await attempt(
+        buildMessage({ from, inbox, recipients: admins, digest: overview }),
+        `admins(${admins.length})`
+      )
+    }
+  } finally {
+    transport.close()
+  }
+
+  // Throw only when nothing at all got out — that is an auth or network fault
+  // worth retrying. Retrying a partial run would re-send to everyone who
+  // already received theirs, and a duplicate reminder costs more trust than a
+  // missed one.
+  if (sent === 0 && failed > 0) {
+    throw new Error(`All ${failed} reminder sends failed`)
+  }
+
+  logger.info('Reminders sent', {
+    trigger,
+    personal: personal.length,
+    overviewTo: overview ? admins.length : 0,
+    sent,
+    failed,
+    silent: members.length - personal.length,
+  })
+  return { sent, failed, personal: personal.length, admins: overview ? admins.length : 0 }
+}
+
+/**
  * Monday morning rather than Friday: the week's work is still ahead of the
  * people reading it. Mountain time, because that is where the committee is —
  * a UTC schedule would land on Sunday evening for half the year.
@@ -110,7 +229,7 @@ export const weeklyDigest = onSchedule(
     secrets: [SMTP_PASSWORD],
   },
   async () => {
-    await deliverDigest({ trigger: 'schedule' })
+    await deliverPersonalDigests({ trigger: 'schedule' })
   }
 )
 
@@ -118,6 +237,10 @@ export const weeklyDigest = onSchedule(
  * Send one now. Admins only — the roster decides, exactly as the security
  * rules do, because this spends the committee's attention and the ICC's
  * sending reputation.
+ *
+ * Still the committee-wide overview, not the personal split: this is the button
+ * for "everyone look at this", and the weekly run is what addresses people
+ * individually.
  */
 export const sendDigestNow = onCall(
   { region: REGION, secrets: [SMTP_PASSWORD] },
