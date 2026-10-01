@@ -1,27 +1,53 @@
 rules_version = '2';
 
-// Storage rules for ICC EventOps — artist poster uploads.
+// Storage rules for ICC EventOps — artist posters and bio documents.
 //
-// Same allowlist as firestore.rules. Keep the three lists in step:
-// this file, firestore.rules, and COMMITTEE_EMAILS in src/lib/firebaseConfig.js.
+// The committee list is read from Firestore rather than repeated here, using
+// cross-service rules. Each firestore.get() below is a billed Firestore read
+// and counts against a limit of two document queries per evaluation; this file
+// reads one document, and repeated reads of the same document are cached
+// within an evaluation.
 //
 // One caveat worth knowing: getDownloadURL() hands back a URL containing a
 // token, and that URL works for anyone who has it, regardless of these rules.
 // Only committee members can obtain one (the URLs live in Firestore, which is
 // committee-only), but treat a poster URL as shareable once it exists. Fine
 // for promotional posters; do not put anything confidential in this bucket.
+//
+// Deploy with: firebase deploy --only storage
 
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // Mirrors firestore.rules. Keep the bootstrap and fallback lists in step
+    // with that file — they are the only membership data left in source.
+    function bootstrapAdmins() {
+      return ['utahindiacc@gmail.com'];
+    }
+
+    function fallbackEmails() {
+      return ['utahindiacc@gmail.com', 'sarath.s1884@gmail.com', 'info@iccofutah.org'];
+    }
+
+    function email() {
+      return request.auth != null && request.auth.token.email_verified == true
+        ? request.auth.token.email.lower()
+        : '';
+    }
+
+    function hasRoster() {
+      return firestore.exists(/databases/(default)/documents/config/committee);
+    }
+
+    function rosterEmails() {
+      return firestore.get(/databases/(default)/documents/config/committee).data.emails;
+    }
+
     function isCommittee() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email.lower() in [
-             'utahindiacc@gmail.com',
-             'sarath.s1884@gmail.com',
-             'info@iccofutah.org'
-           ];
+      return email() != '' && (
+        email() in bootstrapAdmins() ||
+        (hasRoster() ? email() in rosterEmails() : email() in fallbackEmails())
+      );
     }
 
     // Bios are Word or PDF profiles of a group. Listed exactly, because

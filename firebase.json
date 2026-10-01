@@ -25,7 +25,16 @@
         ]
       },
       {
-        "comment": "index.html points at the fingerprinted bundles, so it must never be cached. This is the fix for the stale-page problem GitHub Pages kept causing: a plain reload picks up each deploy immediately, with no hard refresh.",
+        "comment": "The entry document points at the fingerprinted bundles, so it must never be cached. Both paths are listed because Hosting matches these globs against the path the BROWSER asked for, before resolving anything: a visitor requests \"/\", and the rewrite to /index.html happens afterwards. Matching only \"/index.html\" silently did nothing, so the default max-age=3600 applied and deploys appeared not to land for up to an hour. These three rules do not overlap, so which one wins never has to be reasoned about.",
+        "source": "/",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "/index.html",
         "headers": [
           {
@@ -36,12 +45,10 @@
       }
     ]
   },
-
   "firestore": {
-    "comment": "Without this, the CLI has no idea where the rules live and `firebase deploy --only firestore:rules` fails with 'no targets match'. The rules are the actual security boundary, so they belong in version control and in a deploy command — not pasted into the console by hand, where the repo copy and the live copy silently drift apart.",
+    "comment": "Without this, the CLI has no idea where the rules live and `firebase deploy --only firestore:rules` fails with 'no targets match'. The rules are the actual security boundary, so they belong in version control and in a deploy command \u2014 not pasted into the console by hand, where the repo copy and the live copy silently drift apart.",
     "rules": "firestore.rules"
   },
-
   "storage": {
     "rules": "storage.rules"
   }

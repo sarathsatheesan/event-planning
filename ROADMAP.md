@@ -104,18 +104,59 @@ window is still worth building.
 Two people editing the same event overwrite each other at 800ms granularity
 with no indication that it happened. Survivable at three people. Not at fifteen.
 
-### 8. Administration requires a developer
+### 8. Administration required a developer — *fixed 1 Oct 2026*
 
-Adding one committee member means editing `firebaseConfig.js`,
+Adding one committee member meant editing `firebaseConfig.js`,
 `firestore.rules` and `storage.rules`, then running two deploys and a push.
-Four files and two deploys for what should be an admin screen. Firestore
-security rules can read a config document, so the allowlist can live in the
-database and be managed in-app.
+Four files and two deploys for what should be an admin screen.
+
+The roster now lives in Firestore at `config/committee` and is managed from a
+**Committee** screen in the app, visible to admins. Both rule files read that
+document — Firestore directly, Cloud Storage through cross-service rules — so
+there is one list instead of three and adding an organiser is an administrative
+act, not a release.
+
+Two safeguards, because the document that decides who may edit the roster is
+itself governed by the roster:
+
+- **A permanent owner.** `utahindiacc@gmail.com` is hardcoded in both rule
+  files and always admits. If the last admin removed themselves by mistake
+  there would otherwise be no way back in. That address cannot be removed or
+  demoted in the UI, since the rules would let it in regardless and the screen
+  would merely be lying.
+- **The list cannot be saved without an admin on it**, and a refused read of
+  the roster is treated as "not a member" rather than silently falling back to
+  the source list — otherwise removing someone would not actually remove them.
+
+Before the document exists, both rule files honour the same addresses that were
+previously hardcoded, so deploying the rules changes nothing until the first
+save.
+
+Cost note: each Cloud Storage rules evaluation now performs one billed Firestore
+read. At this volume that is immaterial, but it is not free.
 
 ### 9. No audit trail except artist rationale
 
 Provenance was built for exactly one decision. Budgets, assignees and dates
 change with no record of who changed them or when.
+
+### 9b. Deploys appeared not to land — *fixed 1 Oct 2026*
+
+Across weeks of development the same complaint kept recurring: a change was
+deployed, CI was green, and the live site still showed the old page. It was
+always written off as browser cache.
+
+It was a real defect. `firebase.json` set `Cache-Control: no-cache` on
+`/index.html`, but Hosting matches header globs against **the path the browser
+asked for**, before it resolves anything — and a visitor requests `/`. The
+rewrite to `/index.html` happens afterwards, so the rule never matched and
+Hosting's default `max-age=3600` applied. Every deploy was invisible to anyone
+who had loaded the site within the hour.
+
+Confirmed by reading the live response header, which said `max-age=3600` rather
+than the configured value. Both `/` and `/index.html` are now listed, and the
+three header rules are deliberately non-overlapping so rule precedence never
+has to be reasoned about.
 
 ### 10. Unexplained numbers
 
@@ -135,7 +176,7 @@ each tile?" came up — that is the evidence.
 | ~~Undo on destructive actions~~ ✅ | Cheapest protection against the worst outcome |
 | ~~My Work cross-event view~~ ✅ | Answers the chair's daily question |
 | ~~Create events, from a template or blank~~ ✅ | Delivers the year-over-year promise |
-| Committee management in-app | Removes the developer dependency for an admin task |
+| ~~Committee management in-app~~ ✅ | Removes the developer dependency for an admin task |
 | Notifications and weekly digests | Converts a record into a system that drives work |
 
 ### Next
@@ -195,10 +236,11 @@ each tile?" came up — that is the evidence.
 - **One document per event**, deliberately: two people editing different events
   would otherwise contend, and India Mela's 130-task checklist would push a
   combined document toward Firestore's 1MB limit.
-- **Three allowlists must stay in step:** `COMMITTEE_EMAILS` in
-  `src/lib/firebaseConfig.js`, `firestore.rules`, and `storage.rules`. Moving
-  this into Firestore is scheduled above precisely because three copies is two
-  too many.
+- **One roster, in Firestore.** `config/committee` holds `members` (for the
+  UI), `emails` and `admins` (flat lower-case lists, because the rules language
+  cannot map over a list of objects to extract a field). Both rule files read
+  it. What remains in source is only the permanent owner and the pre-roster
+  fallback, which stop mattering after the first save.
 - **Poster and bio URLs are shareable.** `getDownloadURL()` returns a token URL
   that works for anyone holding it regardless of storage rules. Only committee
   members can obtain one, but treat a poster link as public once it exists.

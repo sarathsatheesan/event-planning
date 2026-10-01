@@ -18,17 +18,22 @@ export const firebaseConfig = {
 }
 
 /**
- * Who is allowed to edit. This list is a UI convenience — it decides whether
- * the app treats you as a committee member. The real enforcement is the
- * identical list in firestore.rules, which runs on Google's servers and cannot
- * be bypassed by editing the page. Keep the two in step.
+ * The committee now lives in Firestore at config/committee and is managed in
+ * the app — this is only what to believe before that document exists or while
+ * it is loading. It mirrors the fallback in firestore.rules and storage.rules;
+ * once the roster is saved for the first time, all three stop mattering.
  *
- * Add the rest of the committee here and in firestore.rules, lower-case.
+ * Adding someone to the committee is no longer a code change. Use the
+ * Committee screen in the app.
  */
-export const COMMITTEE_EMAILS = [
-  'utahindiacc@gmail.com',
-  'sarath.s1884@gmail.com',
-  'info@iccofutah.org',
-]
+export const FALLBACK_COMMITTEE = {
+  emails: ['utahindiacc@gmail.com', 'sarath.s1884@gmail.com', 'info@iccofutah.org'],
+  admins: ['utahindiacc@gmail.com', 'sarath.s1884@gmail.com'],
+}
+
+/** Permanent owners, matching bootstrapAdmins() in both rule files. These
+ *  addresses are always admins, so the committee cannot lock itself out by
+ *  removing the last one. */
+export const BOOTSTRAP_ADMINS = ['utahindiacc@gmail.com']
 
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId)

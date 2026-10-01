@@ -8,6 +8,9 @@ import {
   saveOverride,
   deleteOverride,
   canEdit,
+  canManageCommittee,
+  watchCommittee,
+  saveCommittee,
   signIn,
   signOutUser,
   isEmailLink,
@@ -20,6 +23,7 @@ import EventDetail from './components/EventDetail.jsx'
 import AuthBar from './components/AuthBar.jsx'
 import MyWork from './components/MyWork.jsx'
 import NewEventDialog from './components/NewEventDialog.jsx'
+import CommitteeDialog from './components/CommitteeDialog.jsx'
 import { buildEvent, newEventId } from './data/blueprint.js'
 import { EditableProvider } from './lib/editing.js'
 
@@ -48,6 +52,9 @@ export default function App() {
   const [authBusy, setAuthBusy] = useState(false)
   const [linkSentTo, setLinkSentTo] = useState(null)
   const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false)
+  // null = no roster document yet, so the source fallback applies.
+  const [roster, setRoster] = useState(null)
+  const [managing, setManaging] = useState(false)
 
   const toastTimer = useRef(null)
   // An undoable toast lingers: three and a half seconds is not long enough to
@@ -58,7 +65,12 @@ export default function App() {
     toastTimer.current = window.setTimeout(() => setToast(null), undo ? 9000 : 3600)
   }, [])
 
-  const allowed = canEdit(user)
+  // A roster fetched for a previous sign-in must not outlive it. Derived
+  // rather than cleared in an effect, so there is no frame where the old one
+  // still counts.
+  const activeRoster = user ? roster : null
+  const allowed = canEdit(user, activeRoster)
+  const isAdmin = canManageCommittee(user, activeRoster)
   // Cloud mode means edits are shared and Firestore is authoritative.
   const cloud = isFirebaseConfigured && allowed
   // Editing requires being on the committee list. The one exception is a local
@@ -101,6 +113,18 @@ export default function App() {
       cancelled = true
     }
   }, [showToast])
+
+  // Attempted for anyone signed in, not only people we already think are
+  // members: someone just added to the roster could otherwise never find out,
+  // because reading the roster requires being on it.
+  useEffect(() => {
+    if (!isFirebaseConfigured || !user) return
+    let unsub = () => {}
+    watchCommittee(setRoster).then((fn) => {
+      unsub = fn
+    })
+    return () => unsub()
+  }, [user])
 
   // Live subscription, so two committee members editing at once see each other.
   useEffect(() => {
@@ -247,6 +271,19 @@ export default function App() {
     }
   }
 
+  async function handleSaveCommittee(next) {
+    setAuthBusy(true)
+    try {
+      await saveCommittee(next)
+      setManaging(false)
+      showToast('Committee updated.')
+    } catch (err) {
+      showToast(err?.message ?? 'Could not save the committee.')
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
   async function handleSendLink(email) {
     setAuthBusy(true)
     try {
@@ -285,6 +322,7 @@ export default function App() {
           onConfirmEmail={handleConfirmEmail}
           linkSentTo={linkSentTo}
           needsEmailConfirm={needsEmailConfirm}
+          onManageCommittee={isAdmin ? () => setManaging(true) : null}
         />
 
         {selectedEvent ? (
@@ -316,6 +354,16 @@ export default function App() {
             view={view}
             onViewChange={setView}
             onNewEvent={() => setCreating(true)}
+          />
+        )}
+
+        {managing && (
+          <CommitteeDialog
+            roster={activeRoster}
+            currentEmail={user?.email ?? null}
+            busy={authBusy}
+            onSave={handleSaveCommittee}
+            onClose={() => setManaging(false)}
           />
         )}
 

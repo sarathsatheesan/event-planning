@@ -67,6 +67,7 @@ export default function AuthBar({
   onConfirmEmail,
   linkSentTo,
   needsEmailConfirm,
+  onManageCommittee,
 }) {
   const [typingEmail, setTypingEmail] = useState(false)
 
@@ -118,9 +119,16 @@ export default function AuthBar({
           )
         }
         actions={
-          <button type="button" onClick={onSignOut} disabled={busy} className={BTN}>
-            {busy ? 'Working…' : 'Sign out'}
-          </button>
+          <>
+            {onManageCommittee && (
+              <button type="button" onClick={onManageCommittee} className={BTN}>
+                Committee
+              </button>
+            )}
+            <button type="button" onClick={onSignOut} disabled={busy} className={BTN}>
+              {busy ? 'Working…' : 'Sign out'}
+            </button>
+          </>
         }
       />
     )

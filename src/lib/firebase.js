@@ -1,4 +1,9 @@
-import { firebaseConfig, isFirebaseConfigured, COMMITTEE_EMAILS } from './firebaseConfig.js'
+import {
+  firebaseConfig,
+  isFirebaseConfigured,
+  FALLBACK_COMMITTEE,
+  BOOTSTRAP_ADMINS,
+} from './firebaseConfig.js'
 
 // Firebase is loaded on demand. Unconfigured (or signed-out) visitors never
 // download ~200KB of SDK they cannot use, and the app keeps working offline
@@ -30,11 +35,29 @@ async function getFirebase() {
   return appPromise
 }
 
-export function canEdit(user) {
+const lower = (list) => (list ?? []).map((e) => String(e).toLowerCase())
+
+/**
+ * Membership, decided against the live roster when we have it.
+ *
+ * `roster` is null before the document has loaded or when none exists, in
+ * which case the source fallback applies. A roster that loaded but excludes
+ * this person — including one that came back empty because the read was
+ * denied — means exactly that: not a member.
+ */
+export function canEdit(user, roster) {
   if (!user?.email) return false
-  // Empty allowlist means "nobody has been listed yet" — deny rather than
-  // silently letting every signed-in Google account write.
-  return COMMITTEE_EMAILS.map((e) => e.toLowerCase()).includes(user.email.toLowerCase())
+  const email = user.email.toLowerCase()
+  if (BOOTSTRAP_ADMINS.map((e) => e.toLowerCase()).includes(email)) return true
+  return lower(roster ? roster.emails : FALLBACK_COMMITTEE.emails).includes(email)
+}
+
+/** Who may change the roster itself. */
+export function canManageCommittee(user, roster) {
+  if (!user?.email) return false
+  const email = user.email.toLowerCase()
+  if (BOOTSTRAP_ADMINS.map((e) => e.toLowerCase()).includes(email)) return true
+  return lower(roster ? roster.admins : FALLBACK_COMMITTEE.admins).includes(email)
 }
 
 /** Calls back with the signed-in user (or null). Returns an unsubscribe fn. */
@@ -152,6 +175,38 @@ export async function watchOverrides(onChange, onError) {
     },
     onError
   )
+}
+
+/**
+ * Live subscription to the committee roster.
+ *
+ * Attempted for anyone signed in, not only people we already believe are
+ * members — otherwise somebody added to the roster could never learn that they
+ * were, because reading it requires being on it. A denied read is the answer,
+ * not an error: it means not a member.
+ *
+ * Calls back with the roster, or null when no roster document exists yet (use
+ * the source fallback), or an empty roster when the read was refused.
+ */
+export async function watchCommittee(onChange) {
+  const fb = await getFirebase()
+  if (!fb) {
+    onChange(null)
+    return () => {}
+  }
+  const { doc, onSnapshot } = fb.store
+  return onSnapshot(
+    doc(fb.db, 'config', 'committee'),
+    (snap) => onChange(snap.exists() ? snap.data() : null),
+    () => onChange({ emails: [], admins: [], members: [] })
+  )
+}
+
+export async function saveCommittee(roster) {
+  const fb = await getFirebase()
+  if (!fb) throw new Error('Cloud storage is not configured.')
+  const { doc, setDoc } = fb.store
+  await setDoc(doc(fb.db, 'config', 'committee'), roster)
 }
 
 /** Write one event's edits. Callers debounce; inline editing fires per keystroke. */

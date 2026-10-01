@@ -7,21 +7,69 @@ rules_version = '2';
 // the Firebase web config in the bundle is public by design. Rules run on
 // Google's servers and cannot be bypassed by editing the page.
 //
-// Paste into Firebase console -> Firestore Database -> Rules -> Publish.
-// Keep this list identical to COMMITTEE_EMAILS in src/lib/firebaseConfig.js.
+// The committee list lives in config/committee and is managed in the app. It
+// is no longer duplicated in source — see FALLBACK below for what happens
+// before that document exists.
+//
+// Deploy with: firebase deploy --only firestore:rules
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Permanent keys to the building. Deliberately hardcoded and deliberately
+    // tiny: the committee list is a document governed by these very rules, so
+    // an admin who removes themselves by mistake would otherwise lock everyone
+    // out with no way back in. These addresses always get in.
+    function bootstrapAdmins() {
+      return ['utahindiacc@gmail.com'];
+    }
+
+    // What to honour before anyone has saved the committee document. Matches
+    // the list that was hardcoded here previously, so deploying these rules
+    // changes nothing until the first save.
+    function fallbackEmails() {
+      return ['utahindiacc@gmail.com', 'sarath.s1884@gmail.com', 'info@iccofutah.org'];
+    }
+
+    function fallbackAdmins() {
+      return ['utahindiacc@gmail.com', 'sarath.s1884@gmail.com'];
+    }
+
+    // Empty string for anyone not signed in with a verified address, so the
+    // membership tests below cannot accidentally match a null.
+    function email() {
+      return request.auth != null && request.auth.token.email_verified == true
+        ? request.auth.token.email.lower()
+        : '';
+    }
+
+    function hasRoster() {
+      return exists(/databases/$(database)/documents/config/committee);
+    }
+
+    function roster() {
+      return get(/databases/$(database)/documents/config/committee).data;
+    }
+
     function isCommittee() {
-      return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email.lower() in [
-             'utahindiacc@gmail.com',
-             'sarath.s1884@gmail.com',
-             'info@iccofutah.org'
-             // add each committee member's Google address here, lower-case
-           ];
+      return email() != '' && (
+        email() in bootstrapAdmins() ||
+        (hasRoster() ? email() in roster().emails : email() in fallbackEmails())
+      );
+    }
+
+    function isAdmin() {
+      return email() != '' && (
+        email() in bootstrapAdmins() ||
+        (hasRoster() ? email() in roster().admins : email() in fallbackAdmins())
+      );
+    }
+
+    // The roster itself. Every committee member can see who else is on it;
+    // only admins can change it.
+    match /config/committee {
+      allow read: if isCommittee();
+      allow write: if isAdmin();
     }
 
     match /eventOverrides/{eventId} {
