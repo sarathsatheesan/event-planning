@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { events as seedEvents, deriveStatus } from './data/events.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
 import { isFirebaseConfigured } from './lib/firebaseConfig.js'
@@ -11,6 +11,7 @@ import {
   canManageCommittee,
   watchCommittee,
   saveCommittee,
+  requestDigestNow,
   signIn,
   signOutUser,
   isEmailLink,
@@ -24,8 +25,10 @@ import AuthBar from './components/AuthBar.jsx'
 import MyWork from './components/MyWork.jsx'
 import NewEventDialog from './components/NewEventDialog.jsx'
 import CommitteeDialog from './components/CommitteeDialog.jsx'
+import SendDigestDialog from './components/SendDigestDialog.jsx'
 import { buildEvent, newEventId } from './data/blueprint.js'
 import { EditableProvider } from './lib/editing.js'
+import { CommitteeProvider, toMembers } from './lib/committee.js'
 
 // Inline fields fire on every keystroke. Writing each one straight to Firestore
 // would be both slow and expensive, so writes are coalesced per event.
@@ -55,6 +58,8 @@ export default function App() {
   // null = no roster document yet, so the source fallback applies.
   const [roster, setRoster] = useState(null)
   const [managing, setManaging] = useState(false)
+  const [sendingDigest, setSendingDigest] = useState(false)
+  const [digestBusy, setDigestBusy] = useState(false)
 
   const toastTimer = useRef(null)
   // An undoable toast lingers: three and a half seconds is not long enough to
@@ -69,6 +74,7 @@ export default function App() {
   // rather than cleared in an effect, so there is no frame where the old one
   // still counts.
   const activeRoster = user ? roster : null
+  const members = useMemo(() => toMembers(activeRoster), [activeRoster])
   const allowed = canEdit(user, activeRoster)
   const isAdmin = canManageCommittee(user, activeRoster)
   // Cloud mode means edits are shared and Firestore is authoritative.
@@ -284,6 +290,25 @@ export default function App() {
     }
   }
 
+  async function handleSendDigest(scope) {
+    setDigestBusy(true)
+    try {
+      const result = await requestDigestNow(scope)
+      setSendingDigest(false)
+      if (result?.sent) {
+        showToast(`Sent to ${result.recipients} committee members — "${result.subject}"`)
+      } else if (result?.reason === 'nothing-to-report') {
+        showToast('Nothing overdue, due soon or coming up. No email sent.')
+      } else if (result?.reason === 'no-roster') {
+        showToast('No committee roster saved yet, so there was nobody to email.')
+      }
+    } catch (err) {
+      showToast(err?.message ?? 'Could not send the digest.')
+    } finally {
+      setDigestBusy(false)
+    }
+  }
+
   async function handleSendLink(email) {
     setAuthBusy(true)
     try {
@@ -311,6 +336,7 @@ export default function App() {
 
   return (
     <EditableProvider value={editable}>
+      <CommitteeProvider value={members}>
       <div className="min-h-screen bg-paper">
         <AuthBar
           user={user}
@@ -345,6 +371,7 @@ export default function App() {
             onOpenEvent={setSelectedId}
             view={view}
             onViewChange={setView}
+            onEmailCommittee={isAdmin ? () => setSendingDigest(true) : null}
           />
         ) : (
           <Dashboard
@@ -354,6 +381,15 @@ export default function App() {
             view={view}
             onViewChange={setView}
             onNewEvent={() => setCreating(true)}
+          />
+        )}
+
+        {sendingDigest && (
+          <SendDigestDialog
+            recipientCount={members.length}
+            busy={digestBusy}
+            onSend={handleSendDigest}
+            onClose={() => setSendingDigest(false)}
           />
         )}
 
@@ -396,6 +432,7 @@ export default function App() {
           </div>
         )}
       </div>
+      </CommitteeProvider>
     </EditableProvider>
   )
 }

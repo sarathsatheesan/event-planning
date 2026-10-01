@@ -51,5 +51,13 @@
   },
   "storage": {
     "rules": "storage.rules"
+  },
+  "functions": {
+    "comment": "Two predeploy steps. install, because the CLI analyses this source locally to work out what to deploy and cannot resolve firebase-functions without node_modules present \u2014 a fresh clone would otherwise fail with 'Couldn't find firebase-functions package'. Then copy-seed stages src/data into functions/seed, because `firebase deploy` only uploads this directory; the staged copy is gitignored and regenerated every time, so it cannot drift from the app.",
+    "source": "functions",
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" install",
+      "npm --prefix \"$RESOURCE_DIR\" run seed"
+    ]
   }
 }

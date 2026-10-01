@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { taskStatusTone } from '../../data/events.js'
 import StatusPill from '../StatusPill.jsx'
-import { InlineField, RemoveButton, AddButton } from '../fields.jsx'
+import { InlineField, PersonField, RemoveButton, AddButton } from '../fields.jsx'
 import { formatTime, toMinutes, offsetFromStart } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
 
@@ -183,9 +183,10 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
                     placeholder="What happens at this time"
                     className="w-full text-sm font-semibold text-ink"
                   />
-                  <InlineField
+                  <PersonField
                     value={it.owner}
-                    onChange={(v) => patchItem(idx, { owner: v })}
+                    email={it.ownerEmail}
+                    onChange={(name, email) => patchItem(idx, { owner: name, ownerEmail: email })}
                     placeholder="Owner"
                     className="mt-0.5 w-40 text-xs text-ink-soft"
                   />

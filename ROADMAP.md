@@ -66,12 +66,82 @@ has three addresses on it. A volunteer opening the link sees the blank seed
 template, not the real run of show. The headline day-of feature is unusable by
 its intended users. This is the sharpest contradiction in the product.
 
-### 3. Nothing ever tells anyone anything
+### 3. Nothing ever told anyone anything — *fixed 1 Oct 2026*
 
-Every milestone carries an assignee and a due date. No reminder, digest or
-nudge exists anywhere in the system. For a volunteer committee where nobody is
-paid to check a dashboard, this is the single highest-leverage missing
-capability.
+Every milestone carried an assignee and a due date, and no reminder, digest or
+nudge existed anywhere. For a volunteer committee where nobody is paid to check
+a dashboard, this was the single highest-leverage gap.
+
+A scheduled Cloud Function now emails the committee every Monday at 8am
+Mountain: what is overdue and what is due within seven days, grouped by owner,
+plus any event landing in the next fortnight. Mail goes out over Gmail SMTP from
+the ICC's own address, so reminders arrive from a sender volunteers recognise
+rather than a noreply.
+
+**Not via the Trigger Email extension**, which was the obvious route and the
+original plan. Firebase Extensions shuts down on 31 March 2027; already-installed
+extensions keep running indefinitely, so it was not a cliff, but management
+features disappear and the installation could never be edited or reconfigured
+again. Google's own guidance is to move to plain 2nd-gen functions. Adopting a
+dependency with an announced end-of-life was not worth it for roughly twenty
+lines of nodemailer, and removing it took a moving part out of the system: no
+extension, no intermediary `mail` collection, one less thing to understand.
+
+The SMTP password is a Secret Manager secret bound to the function at deploy
+time. It is not in this repository, not in an environment file, and the send
+error path deliberately logs only the failure reason — logging the message
+object would put the transport config, and therefore the password, into Cloud
+Logging.
+
+The digest is addressed to the ICC inbox with the committee bcc'd, rather than
+thirty addresses in the To line: that would expose everyone's address to
+everyone and invite a reply-all thread on an automated message. Replies land in
+the ICC inbox, where somebody reads them.
+
+**Send one now.** Admins get an *Email the committee* button on the My Work
+view, with a choice of scope — this week, or everything including past events.
+It calls the same `deliverDigest` the Monday schedule does, so a manual push
+cannot quietly differ from the automatic one; there is one code path, not two.
+
+Three guards on it, because sending is not undoable and spends both the
+committee's attention and the ICC's sending reputation:
+
+- **The function re-checks that the caller is an admin** against the roster. The
+  button is hidden from everyone else, but a hidden button is not a permission.
+- **A two-minute cooldown** between manual sends, so a stuck finger cannot email
+  the committee four times.
+- **A quiet result is reported, not sent.** If nothing is overdue, due soon or
+  coming up, no email goes out and the person who pressed the button is told
+  so — rather than wondering whether it worked.
+
+Three judgements worth recording:
+
+- **A quiet week sends nothing.** An email that arrives saying "nothing to
+  report" teaches people to ignore it, and the one week it matters they will.
+- **Sections cap at twelve rows** with "…and N more". The first real run
+  produced thirty-one overdue items under a single heading, which is a wall,
+  and a wall gets archived unread.
+- **The digest logic is pure and tested** against the actual calendar at
+  several dates, because the formatting of an email nobody sees until it
+  arrives is exactly the kind of thing that rots silently. Testing it caught a
+  missing charset declaration that would have delivered "Â·" and "â€¦" to every
+  recipient.
+
+### 3b. Assignees were names, not people — *fixed 1 Oct 2026*
+
+The first real digest revealed something the app had been hiding: **all
+thirty-one overdue milestones were unassigned**. Assignee was a free-text box,
+so a name in it had no identity, no address, and no way to be chased.
+
+Milestone owners and run-of-show owners are now picked from the committee
+roster, storing the member's address alongside their name. The existing typed
+names are not disturbed: one that matches a roster member resolves to them
+automatically, and one that does not — "Chinmy", say — is kept and labelled
+rather than wiped. With no roster loaded the field falls back to the free-text
+box it replaced, because a dropdown with nothing in it cannot be used.
+
+This is also the prerequisite for per-person reminders, which the whole-committee
+digest deliberately does not yet attempt.
 
 ### 4. No cross-event view — *first version shipped 1 Oct 2026*
 
@@ -177,10 +247,15 @@ each tile?" came up — that is the evidence.
 | ~~My Work cross-event view~~ ✅ | Answers the chair's daily question |
 | ~~Create events, from a template or blank~~ ✅ | Delivers the year-over-year promise |
 | ~~Committee management in-app~~ ✅ | Removes the developer dependency for an admin task |
-| Notifications and weekly digests | Converts a record into a system that drives work |
+| ~~Notifications and weekly digests~~ ✅ | Converts a record into a system that drives work |
+| ~~Assignees linked to committee accounts~~ ✅ | Gives a task an address, not just a name |
 
 ### Next
 
+- **Per-person reminders.** Now unblocked: milestones carry an owner's address.
+  Each member gets their own list; admins additionally get the full picture.
+- **Backfill the owners.** Thirty-one overdue milestones have nobody on them.
+  The picker makes assigning them quick, but somebody has to do it once.
 - **Public read-only day-of view.** A per-event share link or PIN exposing only
   the run of show. Unblocks volunteers without opening the vendor directory's
   phone numbers.

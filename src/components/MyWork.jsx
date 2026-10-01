@@ -77,7 +77,7 @@ function bucketFor(due, today) {
   return 'later'
 }
 
-export default function MyWork({ events, today, onOpenEvent, view, onViewChange }) {
+export default function MyWork({ events, today, onOpenEvent, view, onViewChange, onEmailCommittee }) {
   const [person, setPerson] = useState(readPerson)
   const [showDone, setShowDone] = useState(false)
   // Events that already happened still hold unticked milestones. They are
@@ -166,7 +166,20 @@ export default function MyWork({ events, today, onOpenEvent, view, onViewChange 
             Milestones across every upcoming event, by owner and due date.
           </p>
         </div>
-        <ViewSwitch view={view} onChange={onViewChange} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ViewSwitch view={view} onChange={onViewChange} />
+          {/* Admins only. Sending spends the committee's attention, and the
+              function re-checks the caller regardless of this button. */}
+          {onEmailCommittee && (
+            <button
+              type="button"
+              onClick={onEmailCommittee}
+              className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+            >
+              Email the committee
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">

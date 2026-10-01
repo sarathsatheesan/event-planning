@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { taskStatusTone } from '../../data/events.js'
 import { realignDueDates, shiftDate, ANCHOR_ORDER, ANCHOR_DAYS } from '../../data/template.js'
 import StatusPill from '../StatusPill.jsx'
-import { InlineField, InlineSelect, RemoveButton, AddButton } from '../fields.jsx'
+import { InlineField, InlineSelect, PersonField, RemoveButton, AddButton } from '../fields.jsx'
 import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
 
@@ -213,11 +213,14 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
                           className="text-xs text-ink-soft"
                         />
                         <span aria-hidden="true">·</span>
-                        <InlineField
+                        <PersonField
                           value={t.assignee}
-                          onChange={(v) => patchTask(t.id, { assignee: v })}
+                          email={t.assigneeEmail}
+                          onChange={(name, email) =>
+                            patchTask(t.id, { assignee: name, assigneeEmail: email })
+                          }
                           placeholder="Unassigned"
-                          className="w-28 text-xs text-ink-soft"
+                          className="w-32 text-xs text-ink-soft"
                         />
                         <span aria-hidden="true">·</span>
                         <span>due</span>

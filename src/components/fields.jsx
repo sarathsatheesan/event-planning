@@ -1,4 +1,5 @@
 import { useEditable } from '../lib/editing.js'
+import { useCommittee } from '../lib/committee.js'
 import { formatTime } from '../lib/records.js'
 
 // Shared editing primitives.
@@ -130,6 +131,73 @@ export function InlineSelect({ value, onChange, options, className = '', ariaLab
           {o}
         </option>
       ))}
+    </select>
+  )
+}
+
+const UNASSIGNED = ''
+const LEGACY = '__legacy__'
+
+/**
+ * Picks a person from the committee roster, storing their address alongside
+ * the name so reminders have somewhere to go.
+ *
+ * Three things it has to tolerate. Hundreds of milestones already carry typed
+ * names like "Hari" with no address — those resolve automatically when a
+ * roster member has the same name, and otherwise stay put rather than being
+ * silently wiped. And with no roster at all (a local checkout, or before the
+ * committee has been saved) it falls back to the free-text box it replaced,
+ * because a dropdown with nothing in it cannot be used.
+ */
+export function PersonField({ value, email, onChange, placeholder = 'Unassigned', className = '' }) {
+  const editable = useEditable()
+  const people = useCommittee()
+
+  const typed = (value ?? '').trim()
+  const matchedByEmail = email ? people.find((p) => p.email === String(email).toLowerCase()) : null
+  const matchedByName =
+    !matchedByEmail && typed
+      ? people.find((p) => p.name && p.name.toLowerCase() === typed.toLowerCase())
+      : null
+  const matched = matchedByEmail ?? matchedByName
+
+  if (!editable) {
+    return <ReadOnly value={matched?.label ?? typed} placeholder={placeholder} className={className} />
+  }
+
+  if (people.length === 0) {
+    return (
+      <InlineField
+        value={value}
+        onChange={(v) => onChange(v, null)}
+        placeholder={placeholder}
+        className={className}
+      />
+    )
+  }
+
+  const selected = matched ? matched.email : typed ? LEGACY : UNASSIGNED
+
+  return (
+    <select
+      value={selected}
+      aria-label={placeholder}
+      onChange={(e) => {
+        const next = e.target.value
+        if (next === LEGACY) return
+        if (next === UNASSIGNED) return onChange('', null)
+        const person = people.find((p) => p.email === next)
+        if (person) onChange(person.name || person.email, person.email)
+      }}
+      className={`focus-ring rounded-md border border-border-soft bg-transparent px-1 py-0.5 transition hover:border-border focus:border-accent focus:bg-surface ${className}`}
+    >
+      <option value={UNASSIGNED}>{placeholder}</option>
+      {people.map((p) => (
+        <option key={p.email} value={p.email}>
+          {p.label}
+        </option>
+      ))}
+      {selected === LEGACY && <option value={LEGACY}>{typed} — not on the committee</option>}
     </select>
   )
 }

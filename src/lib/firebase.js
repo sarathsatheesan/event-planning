@@ -14,11 +14,12 @@ async function getFirebase() {
   if (!isFirebaseConfigured) return null
   if (!appPromise) {
     appPromise = (async () => {
-      const [{ initializeApp }, auth, store, storage] = await Promise.all([
+      const [{ initializeApp }, auth, store, storage, functions] = await Promise.all([
         import('firebase/app'),
         import('firebase/auth'),
         import('firebase/firestore'),
         import('firebase/storage'),
+        import('firebase/functions'),
       ])
       const app = initializeApp(firebaseConfig)
       return {
@@ -26,9 +27,12 @@ async function getFirebase() {
         auth,
         store,
         storage,
+        functions,
         authInstance: auth.getAuth(app),
         db: store.getFirestore(app),
         bucket: storage.getStorage(app),
+        // Must match REGION in functions/index.js, or the call 404s.
+        fns: functions.getFunctions(app, 'us-central1'),
       }
     })()
   }
@@ -268,4 +272,17 @@ export async function deleteArtistFile(path) {
   } catch {
     // Already gone, or never uploaded. Not worth surfacing to the user.
   }
+}
+
+/**
+ * Sends the weekly digest immediately. The function re-checks that the caller
+ * is an admin: this button is hidden from everyone else, but a hidden button
+ * is not a permission.
+ */
+export async function requestDigestNow(scope = 'upcoming') {
+  const fb = await getFirebase()
+  if (!fb) throw new Error('Cloud functions are not configured.')
+  const { httpsCallable } = fb.functions
+  const result = await httpsCallable(fb.fns, 'sendDigestNow')({ scope })
+  return result.data
 }
