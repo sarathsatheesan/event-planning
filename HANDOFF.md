@@ -54,6 +54,10 @@ so a region change needs the client updated or calls 404.
 - `sendDigestNow` — callable, admin-only, from **My work → Email the
   committee**. Still the **shared** list to the whole roster, which is what that
   button is for. Two-minute cooldown.
+- `previewMondayReminders` — callable, admin-only, from **My work → Preview
+  Monday**. Returns exactly what the schedule would send, from live Firestore
+  data, and **binds no secret**, so it has no SMTP password and cannot send. Use
+  it instead of a Force run when the question is "who would get this".
 
 Digest windows: **7 days** forward for tasks, **14 days** for events,
 **unbounded** backwards for overdue, **12 rows** shown per section. Completed
@@ -62,6 +66,9 @@ events excluded unless the manual send asks for "Everything".
 The shared overview goes **to** the ICC inbox with the committee **bcc'd** —
 not thirty addresses in the To line. A personal reminder goes straight **to**
 that one person with `replyTo` on the ICC inbox and nobody copied.
+
+`npm test` in `functions/` runs against the **immutable seed**, not Firestore.
+It cannot see owners assigned in the app — only **Preview Monday** can.
 
 A partially failed weekly run is **not** retried: the schedule throws only when
 every send failed. Retrying a partial run would re-send to everyone who already

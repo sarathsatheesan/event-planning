@@ -7,7 +7,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 
 import { events as seedEvents, deriveStatus } from './seed/events.js'
 import { applyOverrides } from './seed/storage.js'
-import { buildDigest } from './digest.js'
+import { buildDigest, previewReminders } from './digest.js'
 import { makeTransport, buildMessage, buildPersonalMessage } from './mailer.js'
 
 initializeApp()
@@ -73,6 +73,24 @@ function adminsOf(roster) {
   return [...new Set([...listed, ...BOOTSTRAP_ADMINS])].filter(
     (e) => e && (known.has(e) || BOOTSTRAP_ADMINS.includes(e))
   )
+}
+
+/**
+ * The caller must be a verified, signed-in committee admin. Returns the roster
+ * it had to read anyway, so the caller does not read it twice.
+ */
+async function requireAdmin(request, action) {
+  const email = request.auth?.token?.email?.toLowerCase()
+  const verified = request.auth?.token?.email_verified === true
+  if (!email || !verified) {
+    throw new HttpsError('unauthenticated', 'Sign in first.')
+  }
+  const roster = await readRoster()
+  const admins = (roster?.admins ?? []).map((e) => String(e).toLowerCase())
+  if (!BOOTSTRAP_ADMINS.includes(email) && !admins.includes(email)) {
+    throw new HttpsError('permission-denied', `Only committee admins can ${action}.`)
+  }
+  return roster
 }
 
 /**
@@ -245,18 +263,8 @@ export const weeklyDigest = onSchedule(
 export const sendDigestNow = onCall(
   { region: REGION, secrets: [SMTP_PASSWORD] },
   async (request) => {
-    const email = request.auth?.token?.email?.toLowerCase()
-    const verified = request.auth?.token?.email_verified === true
-    if (!email || !verified) {
-      throw new HttpsError('unauthenticated', 'Sign in first.')
-    }
-
-    const roster = await readRoster()
-    const admins = (roster?.admins ?? []).map((e) => String(e).toLowerCase())
-    const isAdmin = BOOTSTRAP_ADMINS.includes(email) || admins.includes(email)
-    if (!isAdmin) {
-      throw new HttpsError('permission-denied', 'Only committee admins can send the digest.')
-    }
+    await requireAdmin(request, 'send the digest')
+    const email = request.auth.token.email.toLowerCase()
 
     const logRef = db.doc('config/digestLog')
     const last = (await logRef.get()).data()?.lastAdhocAt?.toMillis?.() ?? 0
@@ -282,3 +290,24 @@ export const sendDigestNow = onCall(
     return result
   }
 )
+
+/**
+ * What Monday would send, without sending it.
+ *
+ * Deliberately binds **no secret**: this function has no SMTP password, so it
+ * cannot email anyone even if it were wrong. A dry run that could send is not a
+ * dry run.
+ *
+ * Reads live Firestore data, so it answers the question the test suite cannot —
+ * the suite runs against the immutable seed, while the owners people actually
+ * assign live in `eventOverrides`.
+ */
+export const previewMondayReminders = onCall({ region: REGION }, async (request) => {
+  const roster = await requireAdmin(request, 'preview the reminders')
+  return previewReminders({
+    events: await readEvents(),
+    today: new Date(),
+    members: rosterMembers(roster),
+    admins: adminsOf(roster),
+  })
+})

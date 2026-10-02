@@ -167,6 +167,12 @@ event and hid nineteen items belonging to three others, so a personal section no
 reserves two rows per event before anything is filled greedily. The overview
 keeps the greedy order: the person who owes the most is read first.
 
+**Preview Monday** (My work, admins only) shows the dry run: who gets an email
+and with what subject, who gets silence, how much work reaches nobody, and —
+the one that is otherwise invisible — which milestones carry a typed name
+matching no committee member. Those look assigned in the app and are chased by
+no one. The preview function binds no mail secret, so it cannot send.
+
 **Ad-hoc "Email the committee" is unchanged** — that button is for "everyone look
 at this", and it still sends the shared list to the whole roster.
 

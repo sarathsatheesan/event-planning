@@ -145,6 +145,51 @@ function groupByEvent(rows) {
   )
 }
 
+function liveEvents(events, includeCompleted) {
+  return includeCompleted
+    ? (events ?? [])
+    : (events ?? []).filter((e) => e.status !== 'Completed')
+}
+
+/**
+ * Every milestone still owed, split into overdue and due-this-week.
+ *
+ * Shared by the emails and by the preview, so a dry run cannot disagree with
+ * what the Monday send would actually do — which would make it worse than no
+ * dry run at all.
+ */
+function collectRows(live, stamp, keep = () => true) {
+  const overdue = []
+  const soon = []
+  for (const event of live) {
+    for (const task of event.checklist ?? []) {
+      if (task.status === 'Done' || !task.due) continue
+      const delta = daysBetween(stamp, task.due)
+      const row = {
+        owner: ownerOf(task.assignee),
+        // Present once the milestone was assigned from the roster rather than
+        // typed. This is what a personal reminder is addressed with.
+        ownerEmail: task.assigneeEmail ?? null,
+        task: task.task || '(untitled)',
+        event: event.name,
+        due: task.due,
+        delta,
+      }
+      if (!keep(row)) continue
+      if (delta < 0) overdue.push(row)
+      else if (delta <= SOON_DAYS) soon.push(row)
+    }
+  }
+  return { overdue, soon }
+}
+
+function upcomingEvents(live, stamp) {
+  return live
+    .map((e) => ({ name: e.name, date: e.date, inDays: daysBetween(stamp, e.date) }))
+    .filter((e) => e.inDays >= 0 && e.inDays <= HORIZON_DAYS)
+    .sort((a, b) => a.inDays - b.inDays)
+}
+
 /**
  * Builds the digest, or returns null when there is nothing worth sending.
  *
@@ -164,37 +209,10 @@ export function buildDigest({
   forPerson = null,
 }) {
   const stamp = dayStamp(today)
-  const live = includeCompleted
-    ? (events ?? [])
-    : (events ?? []).filter((e) => e.status !== 'Completed')
-
-  const overdue = []
-  const soon = []
-
-  for (const event of live) {
-    for (const task of event.checklist ?? []) {
-      if (task.status === 'Done' || !task.due) continue
-      const delta = daysBetween(stamp, task.due)
-      const row = {
-        owner: ownerOf(task.assignee),
-        // Present once the milestone was assigned from the roster rather than
-        // typed. This is what a personal reminder is addressed with.
-        ownerEmail: task.assigneeEmail ?? null,
-        task: task.task || '(untitled)',
-        event: event.name,
-        due: task.due,
-        delta,
-      }
-      if (forPerson && !ownsRow(row, forPerson)) continue
-      if (delta < 0) overdue.push(row)
-      else if (delta <= SOON_DAYS) soon.push(row)
-    }
-  }
-
-  const upcoming = live
-    .map((e) => ({ name: e.name, date: e.date, inDays: daysBetween(stamp, e.date) }))
-    .filter((e) => e.inDays >= 0 && e.inDays <= HORIZON_DAYS)
-    .sort((a, b) => a.inDays - b.inDays)
+  const live = liveEvents(events, includeCompleted)
+  const keep = forPerson ? (row) => ownsRow(row, forPerson) : () => true
+  const { overdue, soon } = collectRows(live, stamp, keep)
+  const upcoming = upcomingEvents(live, stamp)
 
   if (forPerson) {
     // A personal reminder with no work in it is noise, however busy the
@@ -209,10 +227,12 @@ export function buildDigest({
   overdue.sort(byDue)
   soon.sort(byDue)
 
-  const counted =
-    overdue.length > 0
-      ? `${overdue.length} overdue, ${soon.length} due this week`
-      : `${soon.length} due this week`
+  const counted = [
+    overdue.length > 0 ? `${overdue.length} overdue` : null,
+    soon.length > 0 ? `${soon.length} due this week` : null,
+  ]
+    .filter(Boolean)
+    .join(', ')
 
   const subject = forPerson
     ? `EventOps: your ${counted}`
@@ -355,5 +375,84 @@ export function buildDigest({
     text,
     html,
     counts: { overdue: overdue.length, soon: soon.length, upcoming: upcoming.length },
+  }
+}
+
+/**
+ * What the Monday run would do, without doing it.
+ *
+ * Built from the same \`collectRows\` and the same \`ownsRow\` as the send itself,
+ * so this cannot flatter the real behaviour. A dry run that disagrees with the
+ * thing it is previewing is worse than no dry run, because it is believed.
+ *
+ * Three questions it has to answer, in order of how often they bite:
+ *   1. Who gets an email, and what does the subject line say?
+ *   2. Who gets silence, and is that because they are genuinely clear?
+ *   3. Which work would reach nobody at all — unowned, or typed as a name that
+ *      matches no one on the roster? That second case is invisible in the app:
+ *      the milestone looks assigned.
+ */
+export function previewReminders({ events, today, members = [], admins = [], siteUrl }) {
+  const stamp = dayStamp(today)
+  const live = liveEvents(events, false)
+  const { overdue, soon } = collectRows(live, stamp)
+  const open = [...overdue, ...soon]
+
+  const roster = members
+    .filter((m) => m?.email)
+    .map((m) => ({ email: String(m.email).trim().toLowerCase(), name: (m.name ?? '').trim() }))
+
+  const adminSet = new Set(admins.map((e) => String(e).trim().toLowerCase()))
+
+  const people = roster.map((member) => {
+    const mine = open.filter((row) => ownsRow(row, member))
+    const digest = mine.length > 0 ? buildDigest({ events, today, forPerson: member, siteUrl }) : null
+    return {
+      email: member.email,
+      name: member.name,
+      isAdmin: adminSet.has(member.email),
+      overdue: mine.filter((r) => r.delta < 0).length,
+      soon: mine.filter((r) => r.delta >= 0).length,
+      events: [...new Set(mine.map((r) => r.event))].length,
+      subject: digest?.subject ?? null,
+      willSend: digest !== null,
+    }
+  })
+
+  // Work that reaches no inbox. Split, because the two have different fixes:
+  // "Unassigned" needs somebody chosen, while a name matching nobody needs
+  // either the person added to the roster or the name corrected.
+  const unowned = open.filter((row) => row.owner === 'Unassigned')
+  const orphaned = new Map()
+  for (const row of open) {
+    if (row.owner === 'Unassigned') continue
+    if (roster.some((member) => ownsRow(row, member))) continue
+    const current = orphaned.get(row.owner) ?? { name: row.owner, count: 0, events: new Set() }
+    current.count++
+    current.events.add(row.event)
+    orphaned.set(row.owner, current)
+  }
+
+  const overview = buildDigest({ events, today, siteUrl })
+
+  return {
+    today: stamp,
+    totals: {
+      open: open.length,
+      overdue: overdue.length,
+      soon: soon.length,
+      unowned: unowned.length,
+      orphaned: [...orphaned.values()].reduce((n, o) => n + o.count, 0),
+    },
+    people: people.sort(
+      (a, b) =>
+        b.overdue + b.soon - (a.overdue + a.soon) || (a.name || a.email).localeCompare(b.name || b.email)
+    ),
+    orphaned: [...orphaned.values()]
+      .map((o) => ({ name: o.name, count: o.count, events: [...o.events] }))
+      .sort((a, b) => b.count - a.count),
+    overview: overview
+      ? { subject: overview.subject, recipients: [...adminSet].sort(), ...overview.counts }
+      : null,
   }
 }

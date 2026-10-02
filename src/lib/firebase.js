@@ -286,3 +286,17 @@ export async function requestDigestNow(scope = 'upcoming') {
   const result = await httpsCallable(fb.fns, 'sendDigestNow')({ scope })
   return result.data
 }
+
+/**
+ * What the Monday run would send, without sending it.
+ *
+ * The function it calls binds no SMTP secret, so there is no path from this
+ * button to anyone's inbox. Admin-only, re-checked server side.
+ */
+export async function previewMondayReminders() {
+  const fb = await getFirebase()
+  if (!fb) throw new Error('Cloud functions are not configured.')
+  const { httpsCallable } = fb.functions
+  const result = await httpsCallable(fb.fns, 'previewMondayReminders')({})
+  return result.data
+}

@@ -77,7 +77,15 @@ function bucketFor(due, today) {
   return 'later'
 }
 
-export default function MyWork({ events, today, onOpenEvent, view, onViewChange, onEmailCommittee }) {
+export default function MyWork({
+  events,
+  today,
+  onOpenEvent,
+  view,
+  onViewChange,
+  onEmailCommittee,
+  onPreviewReminders,
+}) {
   const [person, setPerson] = useState(readPerson)
   const [showDone, setShowDone] = useState(false)
   // Events that already happened still hold unticked milestones. They are
@@ -170,6 +178,17 @@ export default function MyWork({ events, today, onOpenEvent, view, onViewChange,
           <ViewSwitch view={view} onChange={onViewChange} />
           {/* Admins only. Sending spends the committee's attention, and the
               function re-checks the caller regardless of this button. */}
+          {/* Reads live data and sends nothing — the function behind it has no
+              mail password bound at all. */}
+          {onPreviewReminders && (
+            <button
+              type="button"
+              onClick={onPreviewReminders}
+              className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+            >
+              Preview Monday
+            </button>
+          )}
           {onEmailCommittee && (
             <button
               type="button"

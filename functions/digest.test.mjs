@@ -1,4 +1,4 @@
-import { buildDigest, dayStamp } from './digest.js'
+import { buildDigest, dayStamp, previewReminders } from './digest.js'
 import { events as seedEvents, deriveStatus } from './seed/events.js'
 
 let fails = 0
@@ -272,6 +272,83 @@ console.log('\n--- the overview is unchanged ---')
 check('same subject as before', real.subject, (s) => /^EventOps: \d+ overdue, \d+ due this week$/.test(s))
 check('still grouped by owner', real.text.includes('Unassigned — '), true)
 check('rows still name their event', /^ {4}\S.*\[.*\]$/m.test(real.text), true)
+
+const overdueOnly = buildDigest({
+  events: [ev({ date: '2027-06-01', checklist: [task({ id: 1, due: '2026-12-01', assigneeEmail: 'hari@icc.org' })] })],
+  today: new Date('2027-01-01T09:00:00'),
+  forPerson: { email: 'hari@icc.org', name: 'Hari' },
+})
+check('no zero in the subject when nothing is due soon', overdueOnly.subject, 'EventOps: your 1 overdue')
+check('and the committee subject reads the same way', buildDigest({
+  events: [ev({ date: '2027-06-01', checklist: [task({ id: 1, due: '2026-12-01' })] })],
+  today: new Date('2027-01-01T09:00:00'),
+}).subject, 'EventOps: 1 overdue')
+
+// --------------------------------------------------- the dry run of Monday
+console.log('\n--- preview ---')
+
+const ROSTER = [
+  { email: 'hari@icc.org', name: 'Hari' },
+  { email: 'pavithra@icc.org', name: 'Pavithra Nair' },
+  { email: 'quiet@icc.org', name: 'Quiet Member' },
+]
+const plan = previewReminders({
+  today: new Date('2027-01-01T09:00:00'),
+  members: ROSTER,
+  admins: ['pavithra@icc.org'],
+  events: [
+    ev({ name: 'Diwali', date: '2027-01-20', checklist: [
+      task({ id: 1, due: '2026-12-01', assigneeEmail: 'hari@icc.org', assignee: 'Hari' }),
+      task({ id: 2, due: '2027-01-03', assigneeEmail: 'hari@icc.org', assignee: 'Hari' }),
+      task({ id: 3, due: '2026-12-01', assignee: 'Pavithra Nair' }),
+      task({ id: 4, due: '2026-12-01', assignee: '' }),
+      // Looks assigned in the app, reaches nobody: no such roster member.
+      task({ id: 5, due: '2026-12-01', assignee: 'Chinmy' }),
+      task({ id: 6, due: '2026-12-02', assignee: 'Chinmy' }),
+    ] }),
+    ev({ name: 'Holi', date: '2027-02-01', checklist: [
+      task({ id: 7, due: '2026-12-05', assignee: 'Chinmy' }),
+    ] }),
+    // Completed events are not chased, so nothing here may appear anywhere.
+    ev({ name: 'Old', date: '2026-01-01', status: 'Completed', checklist: [
+      task({ id: 8, due: '2025-12-01', assigneeEmail: 'hari@icc.org' }),
+    ] }),
+  ],
+})
+
+const who = (email) => plan.people.find((x) => x.email === email)
+check('one row per committee member', plan.people.length, 3)
+check('busiest member first', plan.people[0].email, 'hari@icc.org')
+check('Hari is owed two', who('hari@icc.org').overdue + who('hari@icc.org').soon, 2)
+check('one overdue, one due this week', `${who('hari@icc.org').overdue}/${who('hari@icc.org').soon}`, '1/1')
+check('and would be emailed', who('hari@icc.org').willSend, true)
+check('with the subject he will see', who('hari@icc.org').subject, 'EventOps: your 1 overdue, 1 due this week')
+check('name-only match still counts', who('pavithra@icc.org').overdue, 1)
+check('the clear member gets silence', who('quiet@icc.org').willSend, false)
+check('and no subject is invented for them', who('quiet@icc.org').subject, null)
+check('admins are flagged', who('pavithra@icc.org').isAdmin, true)
+check('completed events are excluded', plan.totals.open, 7)
+check('unowned work is counted', plan.totals.unowned, 1)
+check('names matching nobody are counted', plan.totals.orphaned, 3)
+check('and named, so they can be fixed', plan.orphaned[0].name, 'Chinmy')
+check('with the events they sit in', JSON.stringify(plan.orphaned[0].events), '["Diwali","Holi"]')
+check('the overview goes to admins only', JSON.stringify(plan.overview.recipients), '["pavithra@icc.org"]')
+check('and covers everything, owned or not', plan.overview.overdue, 6)
+
+// The preview must not be able to disagree with the send: same rows, same rules.
+const hariDigest = buildDigest({
+  today: new Date('2027-01-01T09:00:00'),
+  forPerson: { email: 'hari@icc.org', name: 'Hari' },
+  events: [ev({ name: 'Diwali', date: '2027-01-20', checklist: [
+    task({ id: 1, due: '2026-12-01', assigneeEmail: 'hari@icc.org', assignee: 'Hari' }),
+    task({ id: 2, due: '2027-01-03', assigneeEmail: 'hari@icc.org', assignee: 'Hari' }),
+  ] })],
+})
+check('preview subject equals the real one', who('hari@icc.org').subject, hariDigest.subject)
+
+const emptyPlan = previewReminders({ events: [], today: new Date('2027-01-01T09:00:00'), members: ROSTER })
+check('no events, nobody emailed', emptyPlan.people.every((x) => !x.willSend), true)
+check('and no overview either', emptyPlan.overview, null)
 
 console.log(`\nstamp helper is local-date safe: ${dayStamp(new Date('2027-03-14T23:30:00'))}`)
 // Write the rendered email out so it can actually be looked at.

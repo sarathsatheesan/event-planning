@@ -26,6 +26,7 @@ import MyWork from './components/MyWork.jsx'
 import NewEventDialog from './components/NewEventDialog.jsx'
 import CommitteeDialog from './components/CommitteeDialog.jsx'
 import SendDigestDialog from './components/SendDigestDialog.jsx'
+import ReminderPreviewDialog from './components/ReminderPreviewDialog.jsx'
 import { buildEvent, newEventId } from './data/blueprint.js'
 import { EditableProvider } from './lib/editing.js'
 import { CommitteeProvider, toMembers } from './lib/committee.js'
@@ -59,6 +60,7 @@ export default function App() {
   const [roster, setRoster] = useState(null)
   const [managing, setManaging] = useState(false)
   const [sendingDigest, setSendingDigest] = useState(false)
+  const [previewing, setPreviewing] = useState(false)
   const [digestBusy, setDigestBusy] = useState(false)
 
   const toastTimer = useRef(null)
@@ -372,6 +374,7 @@ export default function App() {
             view={view}
             onViewChange={setView}
             onEmailCommittee={isAdmin ? () => setSendingDigest(true) : null}
+            onPreviewReminders={isAdmin ? () => setPreviewing(true) : null}
           />
         ) : (
           <Dashboard
@@ -383,6 +386,8 @@ export default function App() {
             onNewEvent={() => setCreating(true)}
           />
         )}
+
+        {previewing && <ReminderPreviewDialog onClose={() => setPreviewing(false)} />}
 
         {sendingDigest && (
           <SendDigestDialog
