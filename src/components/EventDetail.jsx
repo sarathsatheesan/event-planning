@@ -3,7 +3,7 @@ import { statusTone, readiness } from '../data/events.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EditableDate from './EditableDate.jsx'
-import { InlineField, NumberField } from './fields.jsx'
+import { PersonField, InlineField, NumberField } from './fields.jsx'
 import ExportDialog from './ExportDialog.jsx'
 import EventArt from './EventArt.jsx'
 import { useEditable } from '../lib/editing.js'
@@ -112,11 +112,12 @@ export default function EventDetail({
             />
             <span aria-hidden="true">·</span>
             <span>Lead</span>
-            <InlineField
+            <PersonField
               value={event.lead}
-              onChange={(v) => onChange({ lead: v || null })}
+              email={event.leadEmail}
+              onChange={(name, email) => onChange({ lead: name || null, leadEmail: email })}
               placeholder="Unassigned"
-              className="w-32 text-sm text-ink-soft"
+              className="w-40 text-sm text-ink-soft"
             />
             <span aria-hidden="true">·</span>
             <span>Est. attendance</span>

@@ -1,16 +1,22 @@
 import { InlineField, NumberField, RemoveButton, AddButton } from '../fields.jsx'
+import { useEditable } from '../../lib/editing.js'
 
 const BLANK = {
   name: '',
   role: '',
   contact: '',
+  email: '',
   phone: '',
+  website: '',
+  instagram: '',
+  facebook: '',
   loadIn: '',
   balance: 0,
   contractUrl: '',
 }
 
 export default function VendorDirectory({ event, onVendorsChange }) {
+  const editable = useEditable()
   const vendors = event.vendors ?? []
   const outstanding = vendors.reduce((sum, v) => sum + (v.balance ?? 0), 0)
 
@@ -86,6 +92,15 @@ export default function VendorDirectory({ event, onVendorsChange }) {
                   className="w-full text-sm text-ink"
                 />
               </dd>
+              <Field
+                label="Email"
+                show={editable || Boolean(v.email)}
+                type="email"
+                value={v.email}
+                onChange={(val) => patchVendor(i, { email: val })}
+                placeholder="name@example.com"
+                className="w-full text-sm text-ink"
+              />
               <dt className="text-ink-soft">Phone</dt>
               <dd>
                 <InlineField
@@ -96,6 +111,31 @@ export default function VendorDirectory({ event, onVendorsChange }) {
                   className="w-full font-mono text-sm text-ink"
                 />
               </dd>
+              <Field
+                label="Website"
+                show={editable || Boolean(v.website)}
+                type="url"
+                value={v.website}
+                onChange={(val) => patchVendor(i, { website: val })}
+                placeholder="example.com"
+                className="w-full text-sm text-accent"
+              />
+              <Field
+                label="Instagram"
+                show={editable || Boolean(v.instagram)}
+                value={v.instagram}
+                onChange={(val) => patchVendor(i, { instagram: val })}
+                placeholder="@handle"
+                className="w-full text-sm text-ink"
+              />
+              <Field
+                label="Facebook"
+                show={editable || Boolean(v.facebook)}
+                value={v.facebook}
+                onChange={(val) => patchVendor(i, { facebook: val })}
+                placeholder="Page name or link"
+                className="w-full text-sm text-ink"
+              />
               <dt className="text-ink-soft">Load-in</dt>
               <dd>
                 <InlineField
@@ -138,5 +178,17 @@ export default function VendorDirectory({ event, onVendorsChange }) {
         </AddButton>
       </div>
     </div>
+  )
+}
+
+function Field({ label, show = true, ...field }) {
+  if (!show) return null
+  return (
+    <>
+      <dt className="text-ink-soft">{label}</dt>
+      <dd>
+        <InlineField {...field} />
+      </dd>
+    </>
   )
 }

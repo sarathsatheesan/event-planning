@@ -255,11 +255,12 @@ export async function exportEventPdf(event, selectedKeys) {
   if (selectedKeys.includes('vendors')) {
     startSection('Phase 3', 'Vendor & Resource Directory')
     const vendors = event.vendors ?? []
+    const stack = (...lines) => lines.filter(Boolean).join('\n') || '—'
     const rows = vendors.map((v) => [
       v.name || '(unnamed)',
       v.role || '—',
-      v.contact || '—',
-      v.phone || '—',
+      stack(v.contact, v.email, v.phone),
+      stack(v.website, v.instagram, v.facebook),
       v.loadIn || '—',
       money(v.balance),
     ])
@@ -270,7 +271,7 @@ export async function exportEventPdf(event, selectedKeys) {
       const finalY = table(
         doc,
         autoTable,
-        ['Vendor', 'Provides', 'Contact', 'Phone', 'Load-in', 'Balance'],
+        ['Vendor', 'Provides', 'Contact', 'Online', 'Load-in', 'Balance'],
         rows,
         y,
         { 5: { halign: 'right', cellWidth: 60 } }

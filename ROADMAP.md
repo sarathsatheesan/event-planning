@@ -176,6 +176,24 @@ no one. The preview function binds no mail secret, so it cannot send.
 **Ad-hoc "Email the committee" is unchanged** — that button is for "everyone look
 at this", and it still sends the shared list to the whole roster.
 
+### 3d. The event lead was still a typed name — *fixed 2 Oct 2026*
+
+Milestone and run-of-show owners were picked from the roster; the **event lead**
+was not. That was the wrong field to leave as free text, because the lead is the
+one person every other owner escalates to. It now picks from the committee and
+stores `leadEmail` alongside the name, on the same rules as every other person
+field: a typed name that matches a member resolves to them, one that does not is
+kept and labelled.
+
+### 3e. Vendors had a phone number and nothing else — *2 Oct 2026*
+
+The directory held contact, phone, load-in, balance and a contract link. Chasing
+a caterer the week of an event means email; checking a DJ is real means their
+page. Added **email, website, Instagram and Facebook**. Optional fields are
+hidden rather than dashed when read-only — nine rows of "—" on every card is
+noise on a phone at the venue. The PDF stacks the person and the handles into
+two columns rather than growing to ten.
+
 ### 4. No cross-event view — *first version shipped 1 Oct 2026*
 
 Tasks could be filtered by owner *within* one event. There was no way to ask
