@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { describeSource } from '../data/blueprint.js'
+import { ORGS, DEFAULT_ORG } from '../data/events.js'
 
 /**
  * Create an event, optionally from a previous one.
@@ -27,6 +28,7 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
   const [sourceId, setSourceId] = useState('')
+  const [org, setOrg] = useState(DEFAULT_ORG)
   const [error, setError] = useState(null)
 
   // Most recent first: last year's running of an event is the one worth copying.
@@ -54,7 +56,7 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
       setError('Pick the date it happens.')
       return
     }
-    onCreate({ name: trimmed, date, sourceId: sourceId || null })
+    onCreate({ name: trimmed, date, sourceId: sourceId || null, org })
   }
 
   return (
@@ -99,10 +101,25 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
           </label>
 
           <label className="flex flex-col gap-1">
+            <span className={LABEL}>Run by</span>
+            <select value={org} onChange={(e) => setOrg(e.target.value)} className={FIELD}>
+              {ORGS.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
             <span className={LABEL}>Start from</span>
             <select
               value={sourceId}
-              onChange={(e) => setSourceId(e.target.value)}
+              onChange={(e) => {
+                setSourceId(e.target.value)
+                const picked = events.find((ev) => ev.id === e.target.value)
+                if (picked?.org) setOrg(picked.org)
+              }}
               className={FIELD}
             >
               <option value="">Standard template — 23 milestones</option>

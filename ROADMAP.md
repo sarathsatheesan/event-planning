@@ -194,6 +194,37 @@ hidden rather than dashed when read-only — nine rows of "—" on every card is
 noise on a phone at the venue. The PDF stacks the person and the handles into
 two columns rather than growing to ten.
 
+### 3f. One calendar, two organisations — *2 Oct 2026*
+
+Events now carry an **Org** — `ICC` or `Temple` — set on the event, chosen when
+one is created, and carried over when a previous event is used as a template.
+
+The backfill is a default applied where events are read, not a migration
+script. Every record that predates the field reads as ICC from the moment this
+ships — the fifteen seed events, events created by an older build, and override
+documents already in Firestore — with nothing to run, nothing to re-run, and no
+window where half the rows have the field and half do not. An event saved after
+this point persists the value for real. A record that already says `Temple` is
+never rewritten.
+
+The calendar gained filters: **search by name** (native typeahead, no
+dependency), **year**, **org**, and — the suggested addition — **status**.
+Status earns its place because it is already derived for every event and
+answers "what is in flight", which is the question the list is usually opened
+with. Month was considered and dropped: with fifteen events a year it splits
+the list into ones and twos, and year plus status already does the narrowing.
+
+The summary stats follow the filter — narrowing to the temple and still being
+shown the ICC's average readiness would answer a question nobody asked — and
+the count reads "2 of 17 events" so the hidden ones are accounted for rather
+than silently gone. Filter state lives in `App`, not `Dashboard`, because the
+dashboard unmounts whenever an event is opened and filters that reset on every
+back-navigation are filters nobody uses.
+
+Desktop puts the controls on the heading row. Below `sm` they collapse behind a
+**Filters** button carrying a count of how many are active: a filtered list with
+its controls hidden is how people conclude their events have vanished.
+
 ### 4. No cross-event view — *first version shipped 1 Oct 2026*
 
 Tasks could be filtered by owner *within* one event. There was no way to ask

@@ -27,6 +27,7 @@ import NewEventDialog from './components/NewEventDialog.jsx'
 import CommitteeDialog from './components/CommitteeDialog.jsx'
 import SendDigestDialog from './components/SendDigestDialog.jsx'
 import ReminderPreviewDialog from './components/ReminderPreviewDialog.jsx'
+import { EMPTY_FILTERS } from './lib/filters.js'
 import { buildEvent, newEventId } from './data/blueprint.js'
 import { EditableProvider } from './lib/editing.js'
 import { CommitteeProvider, toMembers } from './lib/committee.js'
@@ -61,6 +62,9 @@ export default function App() {
   const [managing, setManaging] = useState(false)
   const [sendingDigest, setSendingDigest] = useState(false)
   const [previewing, setPreviewing] = useState(false)
+  // Held above Dashboard, which unmounts whenever an event is opened. Filters
+  // that reset every time you come back from an event are filters nobody uses.
+  const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [digestBusy, setDigestBusy] = useState(false)
 
   const toastTimer = useRef(null)
@@ -200,10 +204,10 @@ export default function App() {
    * A created event is stored exactly like an edit, under an id that is not in
    * the seed list. See applyOverrides for why that is one mechanism and not two.
    */
-  function handleCreateEvent({ name, date, sourceId }) {
+  function handleCreateEvent({ name, date, sourceId, org }) {
     const source = sourceId ? events.find((e) => e.id === sourceId) : null
     const id = newEventId()
-    const record = buildEvent({ name, date, source })
+    const record = buildEvent({ name, date, source, org })
     setOverrides((prev) => {
       if (cloud) queueWrite(id, record)
       return { ...prev, [id]: record }
@@ -384,6 +388,8 @@ export default function App() {
             view={view}
             onViewChange={setView}
             onNewEvent={() => setCreating(true)}
+            filters={filters}
+            onFiltersChange={setFilters}
           />
         )}
 

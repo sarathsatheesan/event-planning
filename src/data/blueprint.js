@@ -1,4 +1,5 @@
 import { buildTemplateChecklist, realignDueDates, shiftDate, TEMPLATE_CATEGORIES } from './template.js'
+import { DEFAULT_ORG } from './events.js'
 
 // Creating next year's event from last year's is the whole point of keeping a
 // calendar of recurring events. What carries over is everything that describes
@@ -32,10 +33,13 @@ export function describeSource(source) {
  * A new event — either the standard 23-step blueprint, or a copy of a previous
  * event re-spaced around the new date.
  */
-export function buildEvent({ name, date, source }) {
+export function buildEvent({ name, date, source, org }) {
+  // Copying last year's temple event should not quietly produce an ICC one.
+  const runBy = org ?? source?.org ?? DEFAULT_ORG
   const base = {
     name: name.trim(),
     date,
+    org: runBy,
     endDate: null,
     theme: 'default',
     startTime: null,
@@ -67,6 +71,7 @@ export function buildEvent({ name, date, source }) {
     // Owners carry across — the same people usually do the same jobs, and
     // clearing a name is quicker than retyping twenty of them.
     lead: source.lead ?? null,
+    leadEmail: source.leadEmail ?? null,
     budget: source.budget ?? null,
     attendanceEst: source.attendanceEst ?? null,
     heroNote: source.heroNote ?? null,

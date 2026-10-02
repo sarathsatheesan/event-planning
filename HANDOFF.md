@@ -28,6 +28,11 @@ whoever has to run, deploy or debug the thing.
 
 ## Where the data lives
 
+- **Org** — every event has one (`ICC` or `Temple`, from `ORGS` in
+  `src/data/events.js`). Records without the field read as `ICC` via the default
+  in `applyOverrides`; there is no migration script and none is needed. To add a
+  third organisation, add it to `ORGS` — the filter builds itself from the data
+  plus that list.
 - **Events** — `src/data/events.js` is immutable seed. Edits layer on top as
   `eventOverrides/{eventId}` in Firestore. An override whose id is *not* in the
   seed and that carries a name and date **is** a user-created event; see
@@ -67,7 +72,9 @@ The shared overview goes **to** the ICC inbox with the committee **bcc'd** —
 not thirty addresses in the To line. A personal reminder goes straight **to**
 that one person with `replyTo` on the ICC inbox and nobody copied.
 
-`npm test` in `functions/` runs against the **immutable seed**, not Firestore.
+`npm test` at the repo root covers the calendar filters and the org backfill;
+`npm test` in `functions/` covers the digests and runs against the **immutable
+seed**, not Firestore.
 It cannot see owners assigned in the app — only **Preview Monday** can.
 
 A partially failed weekly run is **not** retried: the schedule throws only when

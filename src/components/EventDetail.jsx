@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { statusTone, readiness } from '../data/events.js'
+import { ORGS, statusTone, readiness } from '../data/events.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EditableDate from './EditableDate.jsx'
-import { PersonField, InlineField, NumberField } from './fields.jsx'
+import { PersonField, InlineSelect, InlineField, NumberField } from './fields.jsx'
 import ExportDialog from './ExportDialog.jsx'
 import EventArt from './EventArt.jsx'
 import { useEditable } from '../lib/editing.js'
@@ -109,6 +109,14 @@ export default function EventDetail({
               onChange={(v) => onChange({ venue: v || null })}
               placeholder="Add a venue"
               className="w-52 text-sm text-ink-soft"
+            />
+            <span aria-hidden="true">·</span>
+            <InlineSelect
+              value={event.org ?? 'ICC'}
+              onChange={(v) => onChange({ org: v })}
+              options={ORGS}
+              ariaLabel="Which organisation runs this event"
+              className="text-sm text-ink-soft"
             />
             <span aria-hidden="true">·</span>
             <span>Lead</span>

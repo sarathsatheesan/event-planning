@@ -5,6 +5,8 @@
 // edit made here is NOT shared with teammates and does not travel to another
 // machine. When a real data layer lands, this module is the seam to replace.
 
+import { DEFAULT_ORG } from './events.js'
+
 const KEY = 'eventops.overrides.v1'
 
 // Every access is guarded: Safari private mode throws on localStorage, and a
@@ -50,5 +52,11 @@ export function applyOverrides(events, overrides) {
     .filter(([id, value]) => !seedIds.has(id) && value?.name && value?.date)
     .map(([id, value]) => ({ ...value, id, isCustom: true }))
 
-  return [...edited, ...created]
+  // The org backfill. Doing it here rather than with a migration script means
+  // every record that predates the field reads as ICC from the moment this
+  // ships — seed events, events created earlier, and override documents
+  // written by an older build — with nothing to run, nothing to re-run, and no
+  // window where half the rows have it and half do not. An event saved after
+  // this point persists the value for real.
+  return [...edited, ...created].map((event) => (event.org ? event : { ...event, org: DEFAULT_ORG }))
 }

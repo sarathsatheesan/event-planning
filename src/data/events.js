@@ -9,8 +9,22 @@
 
 import { buildTemplateChecklist, TEMPLATE_CATEGORIES } from './template.js'
 
+/**
+ * Who runs the event.
+ *
+ * The ICC and the temple share a committee and a calendar but not a budget, so
+ * "whose event is this" is a question every list needs to answer. Deliberately
+ * a short closed list rather than free text: two values that can be filtered on
+ * beat twenty spellings of the same two.
+ */
+export const ORGS = ['ICC', 'Temple']
+export const DEFAULT_ORG = 'ICC'
+
 /** The not-yet-planned shape shared by every event awaiting its details. */
 const shell = {
+  // Every event that existed before this field did belongs to the ICC — the
+  // temple's events are the new case, so the default is the old world.
+  org: DEFAULT_ORG,
   endDate: null,
   // Drives the banner artwork — see EventArt.jsx for the palette and motif
   // behind each key.

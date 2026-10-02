@@ -1,10 +1,12 @@
-import { statusTone, readiness, formatDateRange } from '../data/events.js'
+import { statusTone, readiness, formatDateRange, ORGS } from '../data/events.js'
 import { formatTime } from '../lib/records.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EventArt from './EventArt.jsx'
 import ViewSwitch from './ViewSwitch.jsx'
 import { useEditable } from '../lib/editing.js'
+import EventFilters from './EventFilters.jsx'
+import { EMPTY_FILTERS, filterEvents, activeCount } from '../lib/filters.js'
 
 function daysUntil(dateStr, today) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -19,15 +21,28 @@ function TMinusLabel({ dateStr, today }) {
   return <span className="text-ink-soft">T&minus;{n}d</span>
 }
 
-export default function Dashboard({ events, today, onSelectEvent, view, onViewChange, onNewEvent }) {
+export default function Dashboard({
+  events,
+  today,
+  onSelectEvent,
+  view,
+  onViewChange,
+  onNewEvent,
+  filters = EMPTY_FILTERS,
+  onFiltersChange,
+}) {
   const editable = useEditable()
-  const live = events.filter((e) => e.status === 'Live Today').length
-  const upcoming = events.filter((e) => e.status !== 'Completed' && e.status !== 'Live Today').length
+  // The summary follows the filter. Narrowing to the temple and still being
+  // told the ICC's average readiness would answer a question nobody asked.
+  const shown = filterEvents(events, filters)
+  const narrowed = activeCount(filters)
+  const live = shown.filter((e) => e.status === 'Live Today').length
+  const upcoming = shown.filter((e) => e.status !== 'Completed' && e.status !== 'Live Today').length
+  const open = shown.filter((e) => e.status !== 'Completed')
   const avgReadiness = Math.round(
-    events.filter((e) => e.status !== 'Completed').reduce((sum, e) => sum + readiness(e), 0) /
-      Math.max(1, events.filter((e) => e.status !== 'Completed').length)
+    open.reduce((sum, e) => sum + readiness(e), 0) / Math.max(1, open.length)
   )
-  const sorted = [...events].sort((a, b) => new Date(a.date) - new Date(b.date))
+  const sorted = [...shown].sort((a, b) => new Date(a.date) - new Date(b.date))
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
@@ -59,17 +74,43 @@ export default function Dashboard({ events, today, onSelectEvent, view, onViewCh
       </header>
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryStat label="Events tracked" value={events.length} />
+        <SummaryStat label={narrowed ? 'Events shown' : 'Events tracked'} value={shown.length} />
         <SummaryStat label="Live today" value={live} tone={live > 0 ? 'live' : undefined} />
         <SummaryStat label="In planning" value={upcoming} />
         <SummaryStat label="Avg. readiness" value={`${avgReadiness}%`} />
       </div>
 
-      <div className="mb-4 flex items-baseline justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 className="font-display text-xl font-bold">Event Calendar</h2>
-        <p className="text-xs text-ink-soft">{sorted.length} events, chronological</p>
+        <EventFilters
+          events={events}
+          filters={filters}
+          onChange={onFiltersChange}
+          knownOrgs={ORGS}
+        />
+        <p className="w-full text-xs text-ink-soft sm:w-auto">
+          {narrowed
+            ? `${sorted.length} of ${events.length} events`
+            : `${sorted.length} events, chronological`}
+        </p>
       </div>
 
+      {sorted.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-14 text-center">
+          <p className="font-display text-lg font-bold text-ink">No events match</p>
+          <p className="max-w-sm text-sm text-ink-soft">
+            {events.length} event{events.length === 1 ? '' : 's'} on the calendar, none of them
+            matching these filters.
+          </p>
+          <button
+            type="button"
+            onClick={() => onFiltersChange(EMPTY_FILTERS)}
+            className="focus-ring mt-2 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : (
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((event) => {
           const pct = readiness(event)
@@ -111,12 +152,16 @@ export default function Dashboard({ events, today, onSelectEvent, view, onViewCh
                       <span className="italic">No lead assigned</span>
                     )}
                   </span>
+                  <span className="rounded border border-border-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                    {event.org}
+                  </span>
                 </div>
               </div>
             </li>
           )
         })}
       </ul>
+      )}
     </div>
   )
 }
