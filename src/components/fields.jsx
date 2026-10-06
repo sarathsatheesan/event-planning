@@ -116,9 +116,14 @@ export function AddButton({ onClick, children }) {
 
 /** A dropdown styled to match InlineField, for fields with a fixed set of
  *  values — the phase a milestone sits in, the category it belongs to. */
-export function InlineSelect({ value, onChange, options, className = '', ariaLabel }) {
+/**
+ * `placeholder` names the empty option. Without it a blank choice renders as a
+ * blank line, which is fine in a labelled row and useless in a column of five
+ * identical boxes on a phone.
+ */
+export function InlineSelect({ value, onChange, options, className = '', ariaLabel, placeholder }) {
   const editable = useEditable()
-  if (!editable) return <ReadOnly value={value} className={className} />
+  if (!editable) return <ReadOnly value={value} placeholder={placeholder} className={className} />
   return (
     <select
       value={value}
@@ -128,7 +133,7 @@ export function InlineSelect({ value, onChange, options, className = '', ariaLab
     >
       {options.map((o) => (
         <option key={o} value={o}>
-          {o}
+          {o === '' && placeholder ? placeholder : o}
         </option>
       ))}
     </select>

@@ -41,6 +41,29 @@ check('an event created before the field reads as ICC', legacy.find((e) => e.id 
 const temple = applyOverrides(seedEvents, { 'evt-t': { name: 'Temple Annadanam', date: '2027-04-01', org: 'Temple' } })
 check('an explicit Temple value survives', temple.find((e) => e.id === 'evt-t').org, 'Temple')
 
+console.log('\n--- the sponsors backfill ---')
+// Same shape of promise as org: a record written before the field existed
+// reads as an empty list, not undefined, so the tab never has to guess.
+check('every seed event has a sponsors array', materialised.every((e) => Array.isArray(e.sponsors)), true)
+check('and only India Mela has names on it', materialised.filter((e) => e.sponsors.length).map((e) => e.id), ['india-mela'])
+check('77 of them', materialised.find((e) => e.id === 'india-mela').sponsors.length, 77)
+check('an old override reads as an empty list', Array.isArray(legacy.find((e) => e.id === 'evt-old').sponsors), true)
+check('and India Mela keeps its list through an override', legacy.find((e) => e.id === 'india-mela').sponsors.length, 77)
+// The four the committee has actually closed, after the column drift was undone.
+{
+  const mela = materialised.find((e) => e.id === 'india-mela').sponsors
+  const agreed = mela.filter((s) => s.response === 'Agreed')
+  check('four agreed', agreed.length, 4)
+  check('nothing tiered that did not agree', mela.filter((s) => s.tier && s.response !== 'Agreed').length, 0)
+  check('$8,250 pledged', agreed.reduce((n, s) => n + s.amount, 0), 8250)
+  check('and all of it received', agreed.every((s) => s.paymentReceived), true)
+  check('no tier left sitting in the person column', mela.filter((s) => ['Title', 'Gold', 'Platinum'].includes(s.templePoc)).length, 0)
+  check('no outcome left sitting in the person column', mela.filter((s) => /declined|no response/i.test(s.templePoc)).length, 0)
+  check('Sagar kept the reason he declined', mela.find((s) => s.name === 'Sagar').comments, 'Will open a Vendor stall for HVAC')
+  check('13 have somebody on them', mela.filter((s) => s.templePoc).length, 13)
+  check('every id is unique', new Set(mela.map((s) => s.id)).size, 77)
+}
+
 console.log('\n--- filtering ---')
 const list = [
   ev({ id: 'a', name: 'Diwali Celebrations', date: '2027-11-01', org: 'ICC', status: 'Planning' }),

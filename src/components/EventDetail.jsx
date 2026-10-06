@@ -13,6 +13,7 @@ import DayOfCommandCenter from './tabs/DayOfCommandCenter.jsx'
 import VendorDirectory from './tabs/VendorDirectory.jsx'
 import PostEventWrapUp from './tabs/PostEventWrapUp.jsx'
 import FoodStalls from './tabs/FoodStalls.jsx'
+import Sponsors from './tabs/Sponsors.jsx'
 
 const TABS = [
   { key: 'preevent', label: 'Pre-Event Planning', phase: 'Phase 1' },
@@ -34,6 +35,10 @@ function tabsFor(event, editable) {
   const lead = []
   if (event.needsArtists || editable) lead.push({ key: 'artists', label: 'Artist Selection' })
   if (event.needsFoodStalls || editable) lead.push({ key: 'food', label: 'Food Stalls & Menu' })
+  // Sponsors is on every event, with no switch: an event the ICC would not
+  // seek sponsorship for is hard to name, and an empty tab says "nobody has
+  // asked anyone yet", which is itself worth seeing.
+  lead.push({ key: 'sponsors', label: 'Sponsors' })
   return [...lead, ...TABS]
 }
 
@@ -208,6 +213,12 @@ export default function EventDetail({
             onVendorsChange={(foodVendors, undoLabel) => onChange({ foodVendors }, undoLabel)}
             view={tabViews?.foodMenu ?? 'list'}
             onViewChange={(v) => onTabViewChange?.('foodMenu', v)}
+          />
+        )}
+        {activeTab === 'sponsors' && (
+          <Sponsors
+            event={event}
+            onSponsorsChange={(sponsors, undoLabel) => onChange({ sponsors }, undoLabel)}
           />
         )}
         {activeTab === 'artists' && (

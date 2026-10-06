@@ -62,5 +62,6 @@ export function applyOverrides(events, overrides) {
     ...event,
     org: event.org ?? DEFAULT_ORG,
     foodVendors: event.foodVendors ?? [],
+    sponsors: event.sponsors ?? [],
   }))
 }
