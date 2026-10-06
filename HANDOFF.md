@@ -173,11 +173,20 @@ addresses are in the logs — search `Reminder send failed`.
    stayed at 390, which is why it took a while to find — only
    `document.documentElement.scrollWidth` showed it. Any lane, card or row
    that holds a `RemoveButton` needs `relative` on it.
-3. **The mount drops the executable bit.** `./push-to-github.sh` fails with
+3. **Never run `npm audit fix --force` here.** npm's "fix" for the
+   `@grpc/grpc-js` advisories is to **downgrade firebase from 12.x to 9.14**,
+   which is three major versions back and would break the whole app. Plain
+   `npm audit fix` is safe and is what cleared the dompurify and source-map-js
+   advisories; it leaves four grpc findings standing. Those four are inert
+   here: `@grpc/grpc-js` only ships in Firestore's **Node** path, and the
+   browser bundle talks to Firestore over WebChannel, so the code the
+   advisories describe is never loaded. They clear when Firebase ships a
+   release carrying grpc-js > 1.13.5. Do not chase them.
+4. **The mount drops the executable bit.** `./push-to-github.sh` fails with
    `Permission denied` after a session has touched the folder. `bash
    push-to-github.sh` always works; `chmod +x` plus
    `git update-index --chmod=+x` fixes it for the next clone.
-4. **This Mac has two GitHub accounts, and git picks the wrong one.**
+5. **This Mac has two GitHub accounts, and git picks the wrong one.**
    `itbeginsfromutah` is the eNoVo business account (owns the `enovoapp` org);
    `sarathsatheesan` is personal and owns **this** repo. Asked for "a
    github.com credential" the keychain returns the business one, and the push
@@ -189,26 +198,26 @@ addresses are in the logs — search `Reminder send failed`.
    `git credential-osxkeychain erase` — that logs you out of the business
    account too. To check which account is cached:
    `security find-internet-password -s github.com | grep acct`.
-5. **`cd "~/Event Planning/eventops"` does not work** — `~` is not expanded
+6. **`cd "~/Event Planning/eventops"` does not work** — `~` is not expanded
    inside quotes. Use `cd ~/"Event Planning/eventops"`.
-6. **Hosting header globs match the path the browser requested**, before any
+7. **Hosting header globs match the path the browser requested**, before any
    rewrite. A rule on `/index.html` never matches a visit to `/`, so the
    no-cache header silently did nothing and deploys appeared not to land for up
    to an hour. Both paths are listed now. If "my change isn't live" ever
    returns, check the live `Cache-Control` header before blaming the browser.
-7. **`firebase functions:secrets:destroy KEY` with no `@version` destroys the
+8. **`firebase functions:secrets:destroy KEY` with no `@version` destroys the
    latest version.** Always name the version.
-8. **`functions:secrets:prune` diffs against *deployed* functions.** With
+9. **`functions:secrets:prune` diffs against *deployed* functions.** With
    nothing deployed it considers every version unused, including the current
    one. Deploy first, prune after.
-9. **Cloud Run creation fails with a generic "internal error" if APIs were
+10. **Cloud Run creation fails with a generic "internal error" if APIs were
    enabled in the same run.** Wait a few minutes and re-run; it is propagation,
    not a real failure.
-10. **Pushing anything under `.github/workflows/` needs the `workflow` scope** on
+11. **Pushing anything under `.github/workflows/` needs the `workflow` scope** on
    the PAT, or GitHub refuses the push.
-11. **Firebase Extensions shuts down 31 March 2027.** Do not adopt one. Mail is
+12. **Firebase Extensions shuts down 31 March 2027.** Do not adopt one. Mail is
    sent directly from the function with nodemailer for this reason.
-12. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
+13. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
    Now one Firestore document. What remains in source is the permanent owner
    `utahindiacc@gmail.com` — hardcoded in both rule files so the committee can
    never lock itself out — and a pre-roster fallback.
