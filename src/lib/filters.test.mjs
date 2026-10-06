@@ -81,6 +81,25 @@ check('and India Mela keeps its own through an override', legacy.find((e) => e.i
   check('every id is unique', new Set(mela.map((s) => s.id)).size, 77)
 }
 
+console.log('\n--- business vendors ---')
+{
+  const mela = materialised.find((e) => e.id === 'india-mela')
+  const others = materialised.filter((e) => e.id !== 'india-mela')
+  check('India Mela runs them', mela.needsBusinessVendors, true)
+  check('and nobody else does', others.some((e) => e.needsBusinessVendors), false)
+  check('30 booths, both tables of the sheet', mela.businessVendors.length, 30)
+  check('every other event reads as an empty list', others.every((e) => Array.isArray(e.businessVendors) && e.businessVendors.length === 0), true)
+  check('11 confirmed', mela.businessVendors.filter((v) => v.status === 'Confirmed').length, 11)
+  check('11 paid', mela.businessVendors.filter((v) => v.payment === 'Paid').length, 11)
+  check('3 carry a tax id', mela.businessVendors.filter((v) => v.taxId).length, 3)
+  check('nothing is placed on a booth yet', mela.businessVendors.filter((v) => v.booth).length, 0)
+  check('every id is unique', new Set(mela.businessVendors.map((v) => v.id)).size, 30)
+  // The second table's people are here too, tax IDs and all.
+  check('Nakshatra kept its tax id', mela.businessVendors.find((v) => v.taxId === '844198141')?.business, 'Nakshatra Collections')
+  // Sagar has two booths, which is not the same as a duplicate row.
+  check('Saaga is two businesses', mela.businessVendors.filter((v) => v.email === 'sagarkavi@gmail.com').length, 3)
+}
+
 console.log('\n--- filtering ---')
 const list = [
   ev({ id: 'a', name: 'Diwali Celebrations', date: '2027-11-01', org: 'ICC', status: 'Planning' }),

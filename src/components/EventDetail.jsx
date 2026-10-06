@@ -14,6 +14,7 @@ import VendorDirectory from './tabs/VendorDirectory.jsx'
 import PostEventWrapUp from './tabs/PostEventWrapUp.jsx'
 import FoodStalls from './tabs/FoodStalls.jsx'
 import Sponsors from './tabs/Sponsors.jsx'
+import BusinessVendors from './tabs/BusinessVendors.jsx'
 
 const TABS = [
   { key: 'preevent', label: 'Pre-Event Planning', phase: 'Phase 1' },
@@ -39,6 +40,10 @@ function tabsFor(event, editable) {
   // seek sponsorship for is hard to name, and an empty tab says "nobody has
   // asked anyone yet", which is itself worth seeing.
   lead.push({ key: 'sponsors', label: 'Sponsors' })
+  // Business booths are India Mela's alone, so this one is strictly gated —
+  // no `|| editable`. An event created from the Mela inherits the flag, which
+  // is how next year's gets the tab.
+  if (event.needsBusinessVendors) lead.push({ key: 'business', label: 'Business Vendors' })
   return [...lead, ...TABS]
 }
 
@@ -213,6 +218,14 @@ export default function EventDetail({
             onVendorsChange={(foodVendors, undoLabel) => onChange({ foodVendors }, undoLabel)}
             view={tabViews?.foodMenu ?? 'list'}
             onViewChange={(v) => onTabViewChange?.('foodMenu', v)}
+          />
+        )}
+        {activeTab === 'business' && (
+          <BusinessVendors
+            event={event}
+            onVendorsChange={(businessVendors, undoLabel) =>
+              onChange({ businessVendors }, undoLabel)
+            }
           />
         )}
         {activeTab === 'sponsors' && (

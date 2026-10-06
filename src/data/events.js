@@ -10,6 +10,7 @@
 import { buildTemplateChecklist, TEMPLATE_CATEGORIES } from './template.js'
 import { melaFoodVendors } from './melaFood.js'
 import { melaSponsors, sponsorProspects } from './sponsors.js'
+import { melaBusinessVendors } from './businessVendors.js'
 
 /**
  * Who runs the event.
@@ -54,6 +55,10 @@ const shell = {
   // every event would be a dead tab on fifteen pages to serve one.
   needsFoodStalls: false,
   foodVendors: [],
+  // The business and craft booths. India Mela is the only event that runs
+  // them, so unlike sponsors this one is behind a flag.
+  needsBusinessVendors: false,
+  businessVendors: [],
   // Every event starts with the same 77 businesses to approach — the list is
   // the ICC's, not one event's. India Mela overrides this with its own, which
   // carries the outcomes; everywhere else the names arrive and nothing else.
@@ -171,6 +176,8 @@ export const events = [
     id: 'india-mela',
     needsFoodStalls: true,
     foodVendors: melaFoodVendors,
+    needsBusinessVendors: true,
+    businessVendors: melaBusinessVendors,
     sponsors: melaSponsors,
     theme: 'mela',
     name: 'India Mela',

@@ -59,6 +59,8 @@ export function buildEvent({ name, date, source, org }) {
     artistChoice: null,
     needsFoodStalls: false,
     foodVendors: [],
+    needsBusinessVendors: false,
+    businessVendors: [],
   }
 
   if (!source) return base
@@ -101,6 +103,16 @@ export function buildEvent({ name, date, source, org }) {
       depositPaid: false,
       stallPayment: false,
       finalSettlement: false,
+    })),
+    // The business booths carry over the same way: the vendors are the same
+    // people year to year, the paperwork is not.
+    needsBusinessVendors: source.needsBusinessVendors ?? false,
+    businessVendors: (source.businessVendors ?? []).map((vendor) => ({
+      ...vendor,
+      status: '',
+      payment: '',
+      booth: '',
+      comments: '',
     })),
     // Deliberately not copied: spent, retro, artists and the artist choice.
     // A new cycle means new quotes, new candidates and an unwritten wrap-up.

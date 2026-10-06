@@ -92,6 +92,20 @@ functions` if `functions/` changed) comes after all three.
   but `InlineSelect` would silently blank any value the list no longer offers,
   so `FoodStalls` appends an unknown stored type back onto the options rather
   than letting the next save eat it. Keep that guard if the list changes again.
+- **Business vendor booths** — `event.businessVendors[]`, gated by
+  `event.needsBusinessVendors`, which is true only for India Mela — strictly,
+  with no `|| editable`, so the tab does not appear on the other fourteen at
+  all. `blueprint.js` carries the flag and the vendors when an event is created
+  from a previous one, which is how next year's Mela gets the tab; status,
+  payment, booth and comments reset.
+  The 30 rows in `src/data/businessVendors.js` come from **two tables on one
+  sheet**: the outreach list (rows 2–22, headings on row 1) and "2026 Business
+  Vendor Booths" (rows 55–63, headings on row 54, with tax IDs and services).
+  They are kept separate rather than merged — four vendors appear in both by
+  email, and Sagar has two booths in the second table, so a blanket merge would
+  decide things the committee has not. The seed header names all four.
+  Booth Number is a new closed list, 1–25, blank on every row; a vendor on the
+  same booth as another is counted in the summary and tinted.
 - **Sponsors** — `event.sponsors[]`, on **every** event rather than gated by a
   flag like artists and food stalls. India Mela's 77 are seeded in
   `src/data/sponsors.js`, from the workbook's *2026 Sponsors* tab.

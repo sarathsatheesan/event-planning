@@ -63,6 +63,7 @@ export function applyOverrides(events, overrides) {
     ...event,
     org: event.org ?? DEFAULT_ORG,
     foodVendors: event.foodVendors ?? [],
+    businessVendors: event.businessVendors ?? [],
     // The prospect list, not an empty one: the 77 businesses are the ICC's,
     // not one event's, and an event created last month should not start from
     // a blank page. `??` and not `||`, so a committee that deliberately
