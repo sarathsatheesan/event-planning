@@ -92,6 +92,20 @@ functions` if `functions/` changed) comes after all three.
   but `InlineSelect` would silently blank any value the list no longer offers,
   so `FoodStalls` appends an unknown stored type back onto the options rather
   than letting the next save eat it. Keep that guard if the list changes again.
+- **Sponsors** — `event.sponsors[]`, on **every** event rather than gated by a
+  flag like artists and food stalls. India Mela's 77 are seeded in
+  `src/data/sponsors.js`, from the workbook's *2026 Sponsors* tab. Absent on
+  records written before 6 Oct 2026; read it as `event.sponsors ?? []`, which
+  `applyOverrides` already does.
+  The sheet's columns had drifted from its own headers and the seed is not a
+  straight copy — *Contacted* held who made the approach (now the single person
+  column, **Temple POC**, on the roster dropdown), *Temple POC* held the
+  outcome (now **Response**), and the four agreed sponsors had tier, amount and
+  payment note each one column to the left. Every correction is written into
+  that file's header. If the committee disputes one, the header is the record
+  of what was changed and why.
+  `Category` is a new column with no counterpart in the sheet and is blank on
+  all 77 rows on purpose.
 - **Wrap-up follow-ups** — `event.retro.actions[]`, shape
   `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
@@ -263,6 +277,9 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   the floor volunteers it was designed for. Decision deferred deliberately.
 - **No offline support on the day-of view**, which is the one hour the app must
   not fail.
+- **Sponsors are not in the PDF export.** The export's section picker has no
+  entry for them, so a committee meeting handout leaves the sponsor pipeline
+  out. Nobody has asked for it yet.
 - **A scanned PDF menu cannot be read** and the dialog says so rather than
   importing nothing silently. OCR would fix it and is not worth the weight;
   the answer is to ask the vendor for a spreadsheet.
