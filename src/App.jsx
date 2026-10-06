@@ -65,6 +65,14 @@ export default function App() {
   // Held above Dashboard, which unmounts whenever an event is opened. Filters
   // that reset every time you come back from an event are filters nobody uses.
   const [filters, setFilters] = useState(EMPTY_FILTERS)
+  // List or board, per tab, held here for the same reason the filters are:
+  // EventDetail unmounts every time you go back to the calendar, and a view
+  // preference that resets on every event is one nobody sets twice.
+  const [tabViews, setTabViews] = useState({
+    checklist: 'list',
+    runOfShow: 'timeline',
+    actions: 'list',
+  })
   const [digestBusy, setDigestBusy] = useState(false)
 
   const toastTimer = useRef(null)
@@ -369,6 +377,8 @@ export default function App() {
             onReset={() => handleEventReset(selectedEvent.id)}
             onDelete={selectedEvent.isCustom ? () => handleDeleteEvent(selectedEvent.id) : null}
             currentUserEmail={user?.email ?? null}
+            tabViews={tabViews}
+            onTabViewChange={(key, view) => setTabViews((prev) => ({ ...prev, [key]: view }))}
           />
         ) : view === 'work' ? (
           <MyWork

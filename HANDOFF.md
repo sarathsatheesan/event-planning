@@ -41,6 +41,11 @@ whoever has to run, deploy or debug the thing.
   (flat lower-case lists the security rules read) and `members` (for the UI).
   Managed in-app via the **Committee** button. No longer in source.
 - **Artist files** — Cloud Storage under `artistPosters/` and `artistBios/`.
+- **Wrap-up follow-ups** — `event.retro.actions[]`, shape
+  `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
+  written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
+  My Work pull these from **every** event including completed ones, unlike
+  milestones — a follow-up outlives its event.
 - **Mail password** — Secret Manager secret `SMTP_PASSWORD` (version 4 as of
   this writing). Never in the repo.
 - **Mail sender config** — `functions/.env`, committed on purpose. It holds the

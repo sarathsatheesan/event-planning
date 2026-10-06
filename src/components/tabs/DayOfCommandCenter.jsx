@@ -4,8 +4,17 @@ import StatusPill from '../StatusPill.jsx'
 import { InlineField, PersonField, RemoveButton, AddButton } from '../fields.jsx'
 import { formatTime, toMinutes, offsetFromStart } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
+import KanbanBoard, { ViewToggle } from '../KanbanBoard.jsx'
 
-export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) {
+const RUN_STATUSES = ['Not Started', 'In Progress', 'Done']
+
+export default function DayOfCommandCenter({
+  event,
+  today,
+  onRunOfShowChange,
+  view = 'timeline',
+  onViewChange,
+}) {
   const editable = useEditable()
   const isLiveDay = event.status === 'Live Today'
   const [clock, setClock] = useState(() => (isLiveDay ? new Date() : today))
@@ -43,10 +52,12 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
     return idx === -1 ? items.length : idx
   }, [items, nowMinutes, isLiveDay])
 
+  const LANES = RUN_STATUSES.map((key) => ({ key, label: key }))
+
   // Keyed by position, not by time: a real run of show routinely has two things
   // happening at once, and matching on time would advance every item in the slot.
   function cycleStatus(index) {
-    const order = ['Not Started', 'In Progress', 'Done']
+    const order = RUN_STATUSES
     onRunOfShowChange(
       items.map((it, i) =>
         i === index ? { ...it, status: order[(order.indexOf(it.status) + 1) % order.length] } : it
@@ -137,17 +148,41 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
             ? 'Editing the schedule. Items sort by time automatically.'
             : 'Single-tap mode for floor volunteers — tap an item to advance it.'}
         </p>
-        {editable && (
-          <button
-            type="button"
-            onClick={() => setEditing((v) => !v)}
-            className="focus-ring shrink-0 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
-          >
-            {editing ? 'Done editing' : 'Edit schedule'}
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {onViewChange && !editing && (
+            <ViewToggle view={view} onChange={onViewChange} listLabel="Timeline" />
+          )}
+          {editable && (
+            <button
+              type="button"
+              onClick={() => setEditing((v) => !v)}
+              className="focus-ring shrink-0 rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+            >
+              {editing ? 'Done editing' : 'Edit schedule'}
+            </button>
+          )}
+        </div>
       </div>
 
+      {view === 'board' && !editing ? (
+        <KanbanBoard
+          lanes={LANES}
+          items={items}
+          laneOf={(it) => it.status ?? 'Not Started'}
+          onMove={(it, status) =>
+            onRunOfShowChange(items.map((x) => (x === it ? { ...x, status } : x)))
+          }
+          keyOf={(it, i) => `${it.time}-${i}`}
+          emptyLabel="Nothing here"
+          renderCard={(it) => (
+            <>
+              <div className="font-mono tabular text-xs font-semibold text-ink-soft">{it.time}</div>
+              <div className="text-sm font-semibold text-ink">{it.item || 'Untitled item'}</div>
+              {it.owner && <div className="mt-0.5 text-xs text-ink-soft">{it.owner}</div>}
+            </>
+          )}
+        />
+      ) : (
       <ol className="flex flex-col gap-2">
         {items.map((it, idx) => (
           <li key={`${it.time}-${idx}`}>
@@ -228,6 +263,7 @@ export default function DayOfCommandCenter({ event, today, onRunOfShowChange }) 
           </li>
         )}
       </ol>
+      )}
 
       {editing && (
         <div className="mt-3">

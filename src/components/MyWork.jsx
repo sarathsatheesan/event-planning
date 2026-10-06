@@ -97,11 +97,11 @@ export default function MyWork({
   // Flatten once. Fifteen events with a 130-task checklist among them is small
   // enough to do on every render, and memoising keeps it off the critical path.
   const all = useMemo(
-    () =>
-      events
+    () => [
+      ...events
         .filter((event) => includePast || event.status !== 'Completed')
         .flatMap((event) =>
-        (event.checklist ?? []).map((task) => ({
+          (event.checklist ?? []).map((task) => ({
             key: `${event.id}:${task.id}`,
             eventId: event.id,
             eventName: event.name,
@@ -113,6 +113,24 @@ export default function MyWork({
             status: task.status,
           }))
         ),
+      // Wrap-up follow-ups, from every event including the completed ones. A
+      // follow-up outlives its event by definition — "book the hall in
+      // January" is agreed after the event is over — so filtering them out
+      // with the event would hide exactly the ones still owed.
+      ...events.flatMap((event) =>
+        (event.retro?.actions ?? []).map((action) => ({
+          key: `${event.id}:action:${action.id}`,
+          eventId: event.id,
+          eventName: event.name,
+          anchor: 'Follow-up',
+          task: action.action,
+          category: 'Follow-up',
+          assignee: ownerOf(action.assignee),
+          due: action.due || null,
+          status: action.status,
+        }))
+      ),
+    ],
     [events, includePast]
   )
 

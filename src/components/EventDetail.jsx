@@ -41,6 +41,8 @@ export default function EventDetail({
   onReset,
   onDelete,
   currentUserEmail,
+  tabViews,
+  onTabViewChange,
 }) {
   const editable = useEditable()
   const defaultTab = event.status === 'Live Today' ? 'dayof' : event.status === 'Completed' ? 'wrapup' : 'preevent'
@@ -191,6 +193,8 @@ export default function EventDetail({
           <PreEventPlanning
             event={event}
             onChecklistChange={(checklist, undoLabel) => onChange({ checklist }, undoLabel)}
+            view={tabViews?.checklist ?? 'list'}
+            onViewChange={(v) => onTabViewChange?.('checklist', v)}
           />
         )}
         {activeTab === 'artists' && (
@@ -201,6 +205,8 @@ export default function EventDetail({
             event={event}
             today={today}
             onRunOfShowChange={(runOfShow, undoLabel) => onChange({ runOfShow }, undoLabel)}
+            view={tabViews?.runOfShow ?? 'timeline'}
+            onViewChange={(v) => onTabViewChange?.('runOfShow', v)}
           />
         )}
         {activeTab === 'vendors' && (
@@ -213,6 +219,8 @@ export default function EventDetail({
           <PostEventWrapUp
             event={event}
             onRetroChange={(retro, undoLabel) => onChange({ retro }, undoLabel)}
+            view={tabViews?.actions ?? 'list'}
+            onViewChange={(v) => onTabViewChange?.('actions', v)}
           />
         )}
       </div>

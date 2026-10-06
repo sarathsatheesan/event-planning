@@ -158,9 +158,34 @@ function liveEvents(events, includeCompleted) {
  * what the Monday send would actually do — which would make it worse than no
  * dry run at all.
  */
-function collectRows(live, stamp, keep = () => true) {
+function collectRows(live, stamp, keep = () => true, withFollowUps = []) {
   const overdue = []
   const soon = []
+  const push = (row) => {
+    if (!keep(row)) return
+    if (row.delta < 0) overdue.push(row)
+    else if (row.delta <= SOON_DAYS) soon.push(row)
+  }
+
+  // Wrap-up follow-ups come from every event, including the completed ones. A
+  // follow-up outlives its event by definition — it is agreed in the debrief,
+  // after the event is over — so chasing it only while the event is still
+  // upcoming would mean never chasing it at all.
+  for (const event of withFollowUps) {
+    for (const action of event.retro?.actions ?? []) {
+      if (action.status === 'Done' || !action.due) continue
+      push({
+        owner: ownerOf(action.assignee),
+        ownerEmail: action.assigneeEmail ?? null,
+        task: action.action || '(untitled follow-up)',
+        event: event.name,
+        due: action.due,
+        delta: daysBetween(stamp, action.due),
+        kind: 'follow-up',
+      })
+    }
+  }
+
   for (const event of live) {
     for (const task of event.checklist ?? []) {
       if (task.status === 'Done' || !task.due) continue
@@ -174,10 +199,9 @@ function collectRows(live, stamp, keep = () => true) {
         event: event.name,
         due: task.due,
         delta,
+        kind: 'milestone',
       }
-      if (!keep(row)) continue
-      if (delta < 0) overdue.push(row)
-      else if (delta <= SOON_DAYS) soon.push(row)
+      push(row)
     }
   }
   return { overdue, soon }
@@ -211,7 +235,7 @@ export function buildDigest({
   const stamp = dayStamp(today)
   const live = liveEvents(events, includeCompleted)
   const keep = forPerson ? (row) => ownsRow(row, forPerson) : () => true
-  const { overdue, soon } = collectRows(live, stamp, keep)
+  const { overdue, soon } = collectRows(live, stamp, keep, events ?? [])
   const upcoming = upcomingEvents(live, stamp)
 
   if (forPerson) {
@@ -395,7 +419,7 @@ export function buildDigest({
 export function previewReminders({ events, today, members = [], admins = [], siteUrl }) {
   const stamp = dayStamp(today)
   const live = liveEvents(events, false)
-  const { overdue, soon } = collectRows(live, stamp)
+  const { overdue, soon } = collectRows(live, stamp, () => true, events ?? [])
   const open = [...overdue, ...soon]
 
   const roster = members

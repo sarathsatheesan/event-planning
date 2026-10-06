@@ -284,6 +284,73 @@ check('and the committee subject reads the same way', buildDigest({
   today: new Date('2027-01-01T09:00:00'),
 }).subject, 'EventOps: 1 overdue')
 
+// ------------------------------------------------- wrap-up follow-up actions
+console.log('\n--- follow-ups from the wrap-up ---')
+
+const withFollowUp = (over = {}) =>
+  ev({
+    name: 'Nrityanjali',
+    date: '2026-09-27',
+    status: 'Completed',
+    checklist: [],
+    retro: {
+      whatWorked: [],
+      whatDidnt: [],
+      sponsorAcks: [],
+      actions: [
+        { id: 1, action: 'Book the hall in January', assignee: 'Hari', assigneeEmail: 'hari@icc.org', due: '2026-12-01', status: 'Not Started' },
+        { id: 2, action: 'Return the borrowed lights', assignee: 'Hari', assigneeEmail: 'hari@icc.org', due: '2026-10-01', status: 'Done' },
+        ...(over.extra ?? []),
+      ],
+    },
+  })
+
+const followUps = buildDigest({
+  events: [withFollowUp()],
+  today: new Date('2027-01-01T09:00:00'),
+})
+// The event itself is Completed and excluded from the milestone sweep — the
+// follow-up still has to be chased, which is the whole point of the feature.
+check('a follow-up on a finished event is still chased', followUps?.counts.overdue, 1)
+check('and names the event it came from', followUps.text.includes('Nrityanjali'), true)
+check('completed follow-ups are left alone', followUps.text.includes('borrowed lights'), false)
+
+const personalFollowUp = buildDigest({
+  events: [withFollowUp()],
+  today: new Date('2027-01-01T09:00:00'),
+  forPerson: { email: 'hari@icc.org', name: 'Hari' },
+})
+check('it reaches the person who owns it', personalFollowUp?.counts.overdue, 1)
+check('and nobody else', buildDigest({
+  events: [withFollowUp()],
+  today: new Date('2027-01-01T09:00:00'),
+  forPerson: { email: 'pavithra@icc.org', name: 'Pavithra' },
+}), null)
+
+// A wrap-up written before follow-ups existed has no actions array at all.
+const legacyRetro = buildDigest({
+  events: [ev({ date: '2027-01-20', status: 'Planning', checklist: [task({ id: 1, due: '2026-12-01' })],
+    retro: { whatWorked: [], whatDidnt: [], sponsorAcks: [] } })],
+  today: new Date('2027-01-01T09:00:00'),
+})
+check('a retro with no actions array is fine', legacyRetro?.counts.overdue, 1)
+
+const undated = buildDigest({
+  events: [ev({ date: '2027-01-20', status: 'Completed', checklist: [],
+    retro: { actions: [{ id: 1, action: 'Someday', assignee: 'Hari', due: '', status: 'Not Started' }] } })],
+  today: new Date('2027-01-01T09:00:00'),
+})
+check('an action with no due date is not chased', undated, null)
+
+const planFollowUp = previewReminders({
+  today: new Date('2027-01-01T09:00:00'),
+  members: [{ email: 'hari@icc.org', name: 'Hari' }],
+  admins: ['hari@icc.org'],
+  events: [withFollowUp()],
+})
+check('the preview counts follow-ups too', planFollowUp.totals.open, 1)
+check('and shows who would get them', planFollowUp.people[0].willSend, true)
+
 // --------------------------------------------------- the dry run of Monday
 console.log('\n--- preview ---')
 

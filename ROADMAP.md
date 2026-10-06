@@ -225,6 +225,41 @@ Desktop puts the controls on the heading row. Below `sm` they collapse behind a
 **Filters** button carrying a count of how many are active: a filtered list with
 its controls hidden is how people conclude their events have vanished.
 
+### 3g. A board view, and the follow-ups a retro loses — *6 Oct 2026*
+
+A committee member asked for Kanban. Three findings from reading the code before
+building it:
+
+**Pre-Event earns it outright.** Milestones already carry four statuses, so the
+board is lanes over data that already exists. It sits behind a List / Board
+toggle and inherits the category and owner filters — a filter that applied to
+only one view is a filter people stop trusting.
+
+**Day-Of keeps the timeline as its default.** The run of show is sorted by time,
+and on the day that chronology *is* the product. A board regrouped by status is
+useful the morning before, for triage; at 4pm it loses the only ordering that
+matters. Board is offered, never imposed.
+
+**Post-Event had nothing to put on a board.** It is three free-text lists and a
+budget reconciliation — no owners, no statuses, nothing to move. So rather than
+a board with nothing on it, the wrap-up gained **follow-up actions**: what the
+debrief decided to do, with an owner and a due date. That is the half of a retro
+that normally evaporates. Those actions flow into My Work and into the weekly
+reminder like any other milestone — and deliberately from *every* event,
+including completed ones, because a follow-up outlives its event by definition.
+
+No drag-and-drop. HTML5 drag does not work on touch at all, and a library that
+does costs ~40KB for a gesture nobody can use one-handed at a venue. Tapping the
+status chip advances it exactly as the list does; the chevron beside it opens a
+menu to jump straight to a lane.
+
+On a phone the lanes snap-scroll sideways one at a time, lane headers stick while
+you scroll a long one, and the board scrolls itself into view when you switch to
+it — otherwise you tap Board below a tall header and the screen appears not to
+change. Cards are text, not form controls: rendering four inputs per card made
+each one 350px tall and clipped the milestone name inside a one-line box, which
+on a board is the thing you are reading. Editing the fields stays in the list.
+
 ### 4. No cross-event view — *first version shipped 1 Oct 2026*
 
 Tasks could be filtered by owner *within* one event. There was no way to ask

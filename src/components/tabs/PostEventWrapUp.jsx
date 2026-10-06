@@ -1,11 +1,24 @@
-import { InlineField, NumberField, RemoveButton, AddButton } from '../fields.jsx'
+import { InlineField, NumberField, PersonField, RemoveButton, AddButton } from '../fields.jsx'
+import KanbanBoard, { ViewToggle } from '../KanbanBoard.jsx'
+import StatusPill from '../StatusPill.jsx'
+import { taskStatusTone } from '../../data/events.js'
+import { nextId } from '../../lib/records.js'
+import { useEditable } from '../../lib/editing.js'
 
 const BLANK_RETRO = {
   whatWorked: [],
   whatDidnt: [],
   sponsorAcks: [],
+  // Follow-ups are the half of a retro that normally evaporates: "book the hall
+  // earlier next year" is agreed in the debrief and then owned by nobody. These
+  // carry an owner and a due date, so they reach that person's Monday reminder
+  // and their My Work list instead of living in a paragraph.
+  actions: [],
   finalReconciliation: { budget: null, spent: null },
 }
+
+const ACTION_STATUSES = ['Not Started', 'In Progress', 'Blocked', 'Done']
+const ACTION_LANES = ACTION_STATUSES.map((key) => ({ key, label: key }))
 
 /** One of the three free-text lists — worked, didn't, sponsors. */
 function NoteList({ title, titleClass, items, placeholder, addLabel, onChange }) {
@@ -35,7 +48,8 @@ function NoteList({ title, titleClass, items, placeholder, addLabel, onChange })
   )
 }
 
-export default function PostEventWrapUp({ event, onRetroChange }) {
+export default function PostEventWrapUp({ event, onRetroChange, view = 'list', onViewChange }) {
+  const editable = useEditable()
   const retro = event.retro
 
   if (!retro) {
@@ -67,6 +81,22 @@ export default function PostEventWrapUp({ event, onRetroChange }) {
   }
 
   const { whatWorked, whatDidnt, sponsorAcks, finalReconciliation } = retro
+  // Absent on every wrap-up written before follow-ups existed.
+  const actions = retro.actions ?? []
+
+  function patchAction(id, patch) {
+    onRetroChange({ ...retro, actions: actions.map((a) => (a.id === id ? { ...a, ...patch } : a)) })
+  }
+
+  function addAction() {
+    onRetroChange({
+      ...retro,
+      actions: [
+        ...actions,
+        { id: nextId(actions), action: '', assignee: '', assigneeEmail: null, due: '', status: 'Not Started' },
+      ],
+    })
+  }
   const budget = finalReconciliation?.budget ?? null
   const spent = finalReconciliation?.spent ?? null
   // Variance is derived, never stored — a stored copy drifts the moment either
@@ -153,6 +183,133 @@ export default function PostEventWrapUp({ event, onRetroChange }) {
             Add a sponsor
           </AddButton>
         </div>
+      </section>
+
+
+      <section className="rounded-xl border border-border bg-surface p-5">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-display text-lg font-bold text-ink">Follow-up actions</h3>
+          <div className="flex items-center gap-3">
+            <p className="whitespace-nowrap text-xs text-ink-soft">
+              <span className="tabular font-semibold text-ink">
+                {actions.filter((a) => a.status === 'Done').length}
+              </span>
+              <span className="tabular"> / {actions.length}</span> done
+            </p>
+            {onViewChange && actions.length > 0 && (
+              <ViewToggle view={view} onChange={onViewChange} />
+            )}
+          </div>
+        </div>
+        <p className="mb-3 text-xs text-ink-soft">
+          What the debrief decided to actually do. These carry an owner and a due date, so they
+          appear in My Work and in the weekly reminder like any other milestone.
+        </p>
+
+        {actions.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center">
+            <p className="text-sm text-ink-soft">
+              Nothing to follow up yet. &ldquo;Book the hall in January&rdquo; belongs here, with a
+              name and a date on it.
+            </p>
+            {editable && (
+              <div className="mx-auto mt-3 w-64">
+                <AddButton onClick={addAction}>Add the first action</AddButton>
+              </div>
+            )}
+          </div>
+        ) : view === 'board' ? (
+          <KanbanBoard
+            lanes={ACTION_LANES}
+            items={actions}
+            laneOf={(a) => a.status ?? 'Not Started'}
+            onMove={(a, status) => patchAction(a.id, { status })}
+            keyOf={(a) => a.id}
+            emptyLabel="No actions"
+            renderCard={(a) => (
+              <>
+                <p className="text-sm font-medium leading-snug text-ink">
+                  {a.action || 'Untitled action'}
+                </p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {a.assignee?.trim() ? a.assignee : 'Unassigned'}
+                  {a.due && ` · due ${new Date(a.due + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                </p>
+              </>
+            )}
+          />
+        ) : (
+          <ul className="overflow-hidden rounded-lg border border-border">
+            {actions.map((a, i) => (
+              <li
+                key={a.id}
+                className={`flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
+                  i !== actions.length - 1 ? 'border-b border-border-soft' : ''
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <InlineField
+                    value={a.action}
+                    onChange={(v) => patchAction(a.id, { action: v })}
+                    placeholder="What needs doing"
+                    className="w-full text-sm font-medium text-ink"
+                  />
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-1 pl-1.5 text-xs text-ink-soft">
+                    <PersonField
+                      value={a.assignee}
+                      email={a.assigneeEmail}
+                      onChange={(name, email) =>
+                        patchAction(a.id, { assignee: name, assigneeEmail: email })
+                      }
+                      placeholder="Unassigned"
+                      className="w-32 text-xs text-ink-soft"
+                    />
+                    <span aria-hidden="true">·</span>
+                    <span>due</span>
+                    <InlineField
+                      type="date"
+                      value={a.due}
+                      onChange={(v) => patchAction(a.id, { due: v })}
+                      className="font-mono text-xs text-ink-soft"
+                    />
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      editable &&
+                      patchAction(a.id, {
+                        status:
+                          ACTION_STATUSES[
+                            (ACTION_STATUSES.indexOf(a.status) + 1) % ACTION_STATUSES.length
+                          ],
+                      })
+                    }
+                    className={editable ? 'focus-ring rounded-full' : 'cursor-default'}
+                  >
+                    <StatusPill label={a.status} tone={taskStatusTone[a.status]} />
+                  </button>
+                  <RemoveButton
+                    onClick={() =>
+                      onRetroChange(
+                        { ...retro, actions: actions.filter((x) => x.id !== a.id) },
+                        'Follow-up removed.'
+                      )
+                    }
+                    title="Remove this action"
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {actions.length > 0 && editable && (
+          <div className="mt-3 sm:max-w-md">
+            <AddButton onClick={addAction}>Add an action</AddButton>
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">

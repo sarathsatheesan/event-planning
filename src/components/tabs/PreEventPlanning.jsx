@@ -5,11 +5,25 @@ import StatusPill from '../StatusPill.jsx'
 import { InlineField, InlineSelect, PersonField, RemoveButton, AddButton } from '../fields.jsx'
 import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
+import KanbanBoard, { ViewToggle } from '../KanbanBoard.jsx'
 
 const STATUS_CYCLE = ['Not Started', 'In Progress', 'Blocked', 'Done']
+const LANES = STATUS_CYCLE.map((key) => ({ key, label: key }))
+
+/** Short, and red when it has already gone past. */
+function shortDue(due) {
+  return new Date(due + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+function isLate(t) {
+  if (!t.due || t.status === 'Done') return false
+  const today = new Date()
+  const stamp = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  return t.due < stamp
+}
+
 const UNASSIGNED = '__unassigned__'
 
-export default function PreEventPlanning({ event, onChecklistChange }) {
+export default function PreEventPlanning({ event, onChecklistChange, view = 'list', onViewChange }) {
   const editable = useEditable()
   const tasks = event.checklist
   const [category, setCategory] = useState('All')
@@ -124,10 +138,13 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
               </button>
             ))}
           </div>
-          <p className="whitespace-nowrap text-xs text-ink-soft">
-            <span className="tabular font-semibold text-ink">{doneCount}</span>
-            <span className="tabular"> / {tasks.length}</span> milestones complete
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="whitespace-nowrap text-xs text-ink-soft">
+              <span className="tabular font-semibold text-ink">{doneCount}</span>
+              <span className="tabular"> / {tasks.length}</span> milestones complete
+            </p>
+            {onViewChange && <ViewToggle view={view} onChange={onViewChange} />}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -164,14 +181,47 @@ export default function PreEventPlanning({ event, onChecklistChange }) {
           <p className="text-xs text-ink-soft">
             {filtered.length !== tasks.length
               ? `Showing ${filtered.length} of ${tasks.length}.`
-              : editable
-              ? 'Click any field to edit it.'
-              : 'Sign in as a committee member to make changes.'}
+              : !editable
+              ? 'Sign in as a committee member to make changes.'
+              : view === 'board'
+              ? 'Tap a status to move a milestone; switch to List to edit the details.'
+              : 'Click any field to edit it.'}
           </p>
         </div>
       </div>
 
-      {grouped.length === 0 ? (
+      {view === 'board' ? (
+        <KanbanBoard
+          lanes={LANES}
+          items={filtered}
+          laneOf={(t) => t.status}
+          onMove={(t, status) => patchTask(t.id, { status })}
+          keyOf={(t) => t.id}
+          emptyLabel="No milestones"
+          renderCard={(t) => (
+            <>
+              <p className="text-sm font-medium leading-snug text-ink">
+                {t.task || 'Untitled milestone'}
+              </p>
+              <p className="mt-1 text-xs text-ink-soft">
+                <span className="rounded bg-paper px-1.5 py-0.5 font-semibold">{t.anchor}</span>{' '}
+                {t.category}
+              </p>
+              <p className="mt-0.5 text-xs text-ink-soft">
+                {t.assignee?.trim() ? t.assignee : 'Unassigned'}
+                {t.due && (
+                  <>
+                    {' · due '}
+                    <span className={isLate(t) ? 'font-semibold text-critical' : ''}>
+                      {shortDue(t.due)}
+                    </span>
+                  </>
+                )}
+              </p>
+            </>
+          )}
+        />
+      ) : grouped.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-ink-soft">
           No milestones match this filter.
         </div>
