@@ -39,10 +39,22 @@ export default function MenuBoard({
   const editable = useEditable()
   // An editor needs the empty stalls too — that is where a menu gets typed in.
   // A viewer does not: a column of nothing is noise on a review screen.
-  const withMenus = editable ? vendors : vendors.filter((v) => (v.menu?.length ?? 0) > 0)
-  const missing = vendors.length - withMenus.length
+  //
+  // Menus first, either way. The stalls arrive in the workbook's order, which
+  // scatters the empty ones through the board and leaves holes across a row
+  // of four columns — the eye reads that as something broken rather than as a
+  // menu nobody has sent in yet. Sorting is stable, so within each group the
+  // stalls keep the order the rest of the app shows them in.
+  const shown = (editable ? vendors : vendors.filter((v) => (v.menu?.length ?? 0) > 0))
+    .map((v, i) => [v, i])
+    .sort(([a, ai], [b, bi]) => {
+      const has = (v) => ((v.menu?.length ?? 0) > 0 ? 0 : 1)
+      return has(a) - has(b) || ai - bi
+    })
+    .map(([v]) => v)
+  const missing = vendors.filter((v) => (v.menu?.length ?? 0) === 0).length
 
-  if (withMenus.length === 0) {
+  if (shown.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-ink-soft">
         No menus yet. Add dishes to a stall and they appear here side by side.
@@ -55,7 +67,7 @@ export default function MenuBoard({
       <div
         className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:overflow-x-visible sm:pb-0 ${GRID}`}
       >
-        {withMenus.map((vendor) => {
+        {shown.map((vendor) => {
           const level = stallClashLevel(vendor, clashes)
           const tone = level ? CLASH_TONE[level] : null
           const menu = vendor.menu ?? []
@@ -155,9 +167,9 @@ export default function MenuBoard({
         Swipe to see the other stalls
       </p>
 
-      {/* A stall with no menu is not worth a column here, but it is worth
-          saying out loud: the committee is still chasing those menus. */}
-      {missing > 0 && (
+      {/* Only when those stalls are off the board. An editor has them on
+          screen at the end, so counting them again would say nothing. */}
+      {!editable && missing > 0 && (
         <p className="pt-2 text-center text-xs text-ink-soft">
           <span className="tabular font-semibold text-ink">{missing}</span> stall
           {missing === 1 ? '' : 's'} have no menu in yet.
