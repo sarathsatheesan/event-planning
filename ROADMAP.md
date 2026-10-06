@@ -248,6 +248,15 @@ that normally evaporates. Those actions flow into My Work and into the weekly
 reminder like any other milestone — and deliberately from *every* event,
 including completed ones, because a follow-up outlives its event by definition.
 
+Follow-ups are future work by nature — pay the balance, ship the cheque, return
+the hire gear — so they are created **dated two weeks out** rather than blank.
+The reminder is built entirely from dates, so an undated action is chased by
+nobody while looking identical in the app to one that is properly scheduled.
+Where a date is cleared anyway, the row says *no date — nobody will be
+reminded*, and Preview Monday counts undated open work beside the unowned and
+the assigned-to-nobody-real. All three are the same failure: work that looks
+tracked and reaches no inbox.
+
 No drag-and-drop. HTML5 drag does not work on touch at all, and a library that
 does costs ~40KB for a gesture nobody can use one-handed at a venue. Tapping the
 status chip advances it exactly as the list does; the chevron beside it opens a

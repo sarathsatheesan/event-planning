@@ -443,6 +443,25 @@ export function previewReminders({ events, today, members = [], admins = [], sit
     }
   })
 
+  // Open work carrying no due date at all. The reminder is built entirely from
+  // dates, so these are chased by nobody and look identical in the app to work
+  // that is properly scheduled — the quietest of the three failures here.
+  const undated = []
+  for (const event of live) {
+    for (const task of event.checklist ?? []) {
+      if (task.status !== 'Done' && !task.due) {
+        undated.push({ what: task.task || '(untitled)', event: event.name, kind: 'milestone' })
+      }
+    }
+  }
+  for (const event of events ?? []) {
+    for (const action of event.retro?.actions ?? []) {
+      if (action.status !== 'Done' && !action.due) {
+        undated.push({ what: action.action || '(untitled)', event: event.name, kind: 'follow-up' })
+      }
+    }
+  }
+
   // Work that reaches no inbox. Split, because the two have different fixes:
   // "Unassigned" needs somebody chosen, while a name matching nobody needs
   // either the person added to the roster or the name corrected.
@@ -466,12 +485,15 @@ export function previewReminders({ events, today, members = [], admins = [], sit
       overdue: overdue.length,
       soon: soon.length,
       unowned: unowned.length,
-      orphaned: [...orphaned.values()].reduce((n, o) => n + o.count, 0),
+      undated: undated.slice(0, 20),
+    orphaned: [...orphaned.values()].reduce((n, o) => n + o.count, 0),
+      undated: undated.length,
     },
     people: people.sort(
       (a, b) =>
         b.overdue + b.soon - (a.overdue + a.soon) || (a.name || a.email).localeCompare(b.name || b.email)
     ),
+    undated: undated.slice(0, 20),
     orphaned: [...orphaned.values()]
       .map((o) => ({ name: o.name, count: o.count, events: [...o.events] }))
       .sort((a, b) => b.count - a.count),

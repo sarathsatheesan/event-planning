@@ -69,7 +69,10 @@ export default function ReminderPreviewDialog({ onClose }) {
             <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 ['Emails sent', receiving.length],
-                ['Nobody notified', plan.totals.unowned + plan.totals.orphaned],
+                [
+                  'Nobody notified',
+                  plan.totals.unowned + plan.totals.orphaned + (plan.totals.undated ?? 0),
+                ],
                 ['Overdue', plan.totals.overdue],
                 ['Due this week', plan.totals.soon],
               ].map(([label, value]) => (
@@ -126,6 +129,25 @@ export default function ReminderPreviewDialog({ onClose }) {
                     <span className="text-sm font-semibold text-ink">{o.name}</span>
                     <span className="block text-xs text-ink-soft">
                       {o.count} milestone{o.count === 1 ? '' : 's'} · {o.events.join(', ')}
+                    </span>
+                  </li>
+                ))}
+              </Section>
+            )}
+
+            {(plan.totals.undated ?? 0) > 0 && (
+              <Section title={`No due date (${plan.totals.undated})`}>
+                <li className="pb-1 text-xs text-ink-soft">
+                  The reminder is built entirely from dates, so open work with no
+                  date on it is chased by nobody — and in the app it looks exactly like
+                  work that is properly scheduled. Follow-ups now default to a date two
+                  weeks out; these are the ones left blank.
+                </li>
+                {(plan.undated ?? []).map((u, i) => (
+                  <li key={i} className="py-1.5">
+                    <span className="text-sm font-semibold text-ink">{u.what}</span>
+                    <span className="block text-xs text-ink-soft">
+                      {u.event} · {u.kind}
                     </span>
                   </li>
                 ))}

@@ -399,6 +399,25 @@ check('unowned work is counted', plan.totals.unowned, 1)
 check('names matching nobody are counted', plan.totals.orphaned, 3)
 check('and named, so they can be fixed', plan.orphaned[0].name, 'Chinmy')
 check('with the events they sit in', JSON.stringify(plan.orphaned[0].events), '["Diwali","Holi"]')
+
+const undatedPlan = previewReminders({
+  today: new Date('2027-01-01T09:00:00'),
+  members: [{ email: 'hari@icc.org', name: 'Hari' }],
+  admins: [],
+  events: [
+    ev({ name: 'Diwali', date: '2027-02-01', checklist: [
+      task({ id: 1, due: '', assignee: 'Hari', assigneeEmail: 'hari@icc.org' }),
+    ] , retro: { actions: [
+      { id: 1, action: 'Pay the balance', assignee: 'Hari', assigneeEmail: 'hari@icc.org', due: '', status: 'Not Started' },
+      { id: 2, action: 'Return the gear', assignee: 'Hari', assigneeEmail: 'hari@icc.org', due: '2027-01-20', status: 'Not Started' },
+    ] } }),
+  ],
+})
+check('undated work is counted, not chased', undatedPlan.totals.undated, 2)
+check('and named so it can be fixed', undatedPlan.undated.map((u) => u.kind).sort().join(), 'follow-up,milestone')
+check('the dated one is still just future work', undatedPlan.totals.open, 0)
+check('so nobody is emailed about any of it', undatedPlan.people[0].willSend, false)
+
 check('the overview goes to admins only', JSON.stringify(plan.overview.recipients), '["pavithra@icc.org"]')
 check('and covers everything, owned or not', plan.overview.overdue, 6)
 

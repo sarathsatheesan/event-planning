@@ -20,6 +20,12 @@ const BLANK_RETRO = {
 const ACTION_STATUSES = ['Not Started', 'In Progress', 'Blocked', 'Done']
 const ACTION_LANES = ACTION_STATUSES.map((key) => ({ key, label: key }))
 
+function inTwoWeeks() {
+  const d = new Date()
+  d.setDate(d.getDate() + 14)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** One of the three free-text lists — worked, didn't, sponsors. */
 function NoteList({ title, titleClass, items, placeholder, addLabel, onChange }) {
   return (
@@ -93,7 +99,19 @@ export default function PostEventWrapUp({ event, onRetroChange, view = 'list', o
       ...retro,
       actions: [
         ...actions,
-        { id: nextId(actions), action: '', assignee: '', assigneeEmail: null, due: '', status: 'Not Started' },
+        {
+          id: nextId(actions),
+          action: '',
+          assignee: '',
+          assigneeEmail: null,
+          // Two weeks out, not blank. Follow-ups are future work by nature —
+          // pay the balance, ship the cheque, return the hire gear — and an
+          // undated one reaches nobody: the weekly reminder skips anything
+          // without a date, so "no date" is the quietest way to lose a
+          // commitment the debrief just made. Editable like any other field.
+          due: inTwoWeeks(),
+          status: 'Not Started',
+        },
       ],
     })
   }
@@ -233,7 +251,11 @@ export default function PostEventWrapUp({ event, onRetroChange, view = 'list', o
                 </p>
                 <p className="mt-1 text-xs text-ink-soft">
                   {a.assignee?.trim() ? a.assignee : 'Unassigned'}
-                  {a.due && ` · due ${new Date(a.due + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                  {a.due ? (
+                    ` · due ${new Date(a.due + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                  ) : (
+                    <span className="font-semibold text-warning"> · no date</span>
+                  )}
                 </p>
               </>
             )}
@@ -272,6 +294,11 @@ export default function PostEventWrapUp({ event, onRetroChange, view = 'list', o
                       onChange={(v) => patchAction(a.id, { due: v })}
                       className="font-mono text-xs text-ink-soft"
                     />
+                    {!a.due && a.status !== 'Done' && (
+                      <span className="font-semibold text-warning">
+                        no date — nobody will be reminded
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
