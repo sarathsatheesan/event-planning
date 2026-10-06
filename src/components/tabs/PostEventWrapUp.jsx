@@ -85,30 +85,25 @@ export default function PostEventWrapUp({ event, onRetroChange, view = 'list', o
             <>
               {event.name} has finished. Add the final reconciliation, sponsor acknowledgments, and
               what worked / what didn&apos;t, so next year starts from a blueprint rather than a
-              blank page.
+              blank page — plus any follow-up actions still owed, each with an owner and a due
+              date so it reaches their Monday reminder.
             </>
           ) : (
             <>
-              You can start the wrap-up before the event runs, but it is usually filled in
-              afterwards from the reconciliation and the debrief.
+              Reconciliation, sponsor acknowledgments, what worked and what didn&apos;t — usually
+              filled in after the event from the debrief. Follow-up actions live here too, so a
+              balance still to pay can be logged the moment it is agreed.
             </>
           )}
         </p>
-        {/* Two ways in, because they are wanted at different moments. The
-            reconciliation and the debrief notes are a sit-down job, days later.
-            A follow-up — pay the balance, return the hire gear — is remembered
-            while loading the van, and hiding it behind a button labelled
-            "start the wrap-up" is how it gets lost. Both open the same page. */}
-        <div className="mt-2 flex w-full max-w-sm flex-col gap-2">
-          <AddButton onClick={() => onRetroChange({ ...BLANK_RETRO })}>Start the wrap-up</AddButton>
-          <AddButton onClick={() => onRetroChange({ ...BLANK_RETRO, actions: [blankAction([])] })}>
-            Add a follow-up action
+        {/* One way in. Two buttons opening the same page was a false choice —
+            the label just needed to name both of the things behind it, since a
+            follow-up is what people come here for first. */}
+        <div className="mt-2 w-72">
+          <AddButton onClick={() => onRetroChange({ ...BLANK_RETRO })}>
+            Start the wrap-up / add a follow-up
           </AddButton>
         </div>
-        <p className="max-w-sm text-xs text-ink-soft">
-          A follow-up carries an owner and a due date, so it reaches My Work and the weekly
-          reminder instead of living in somebody&apos;s memory.
-        </p>
       </div>
     )
   }
