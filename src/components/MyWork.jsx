@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { taskStatusTone } from '../data/events.js'
+import { useEditable } from '../lib/editing.js'
 import StatusPill from './StatusPill.jsx'
 import ViewSwitch from './ViewSwitch.jsx'
 
@@ -85,7 +86,9 @@ export default function MyWork({
   onViewChange,
   onEmailCommittee,
   onPreviewReminders,
+  onStatusChange,
 }) {
+  const editable = useEditable()
   const [person, setPerson] = useState(readPerson)
   const [showDone, setShowDone] = useState(false)
   // Events that already happened still hold unticked milestones. They are
@@ -103,6 +106,8 @@ export default function MyWork({
         .flatMap((event) =>
           (event.checklist ?? []).map((task) => ({
             key: `${event.id}:${task.id}`,
+            kind: 'milestone',
+            itemId: task.id,
             eventId: event.id,
             eventName: event.name,
             anchor: task.anchor,
@@ -120,6 +125,8 @@ export default function MyWork({
       ...events.flatMap((event) =>
         (event.retro?.actions ?? []).map((action) => ({
           key: `${event.id}:action:${action.id}`,
+          kind: 'action',
+          itemId: action.id,
           eventId: event.id,
           eventName: event.name,
           anchor: 'Follow-up',
@@ -316,7 +323,18 @@ export default function MyWork({
                         )}
                       </span>
                     </span>
-                    <StatusPill label={row.status} tone={taskStatusTone[row.status]} />
+                    {editable && onStatusChange ? (
+                      <button
+                        type="button"
+                        onClick={() => onStatusChange(row)}
+                        title="Advance this status"
+                        className="focus-ring shrink-0 self-start rounded-full sm:self-auto"
+                      >
+                        <StatusPill label={row.status} tone={taskStatusTone[row.status]} />
+                      </button>
+                    ) : (
+                      <StatusPill label={row.status} tone={taskStatusTone[row.status]} />
+                    )}
                   </li>
                 ))}
               </ul>

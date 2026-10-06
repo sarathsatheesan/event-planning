@@ -275,7 +275,13 @@ Tasks could be filtered by owner *within* one event. There was no way to ask
 "what is Pavithra responsible for across all fifteen events" or "what is due
 this week" — which is the chair's actual job.
 
-A **My Work** view now answers this. Still to come: tying it to the signed-in
+A **My Work** view now answers this, and since 6 Oct the status pill there is
+the control, not a label: filter to your own name and work down the list,
+ticking things off without opening each event. It writes back to whichever
+record the row came from — a milestone's checklist or a wrap-up's follow-ups —
+through the same save path as tapping it inside the event, and the cycle itself
+is now defined once in `events.js` rather than copied into each surface. Still
+to come: tying it to the signed-in
 identity rather than a name picker (assignees are free text, so there is no
 mapping from `sarath.s1884@gmail.com` to "Sarath" yet).
 

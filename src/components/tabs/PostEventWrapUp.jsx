@@ -1,7 +1,7 @@
 import { InlineField, NumberField, PersonField, RemoveButton, AddButton } from '../fields.jsx'
 import KanbanBoard, { ViewToggle } from '../KanbanBoard.jsx'
 import StatusPill from '../StatusPill.jsx'
-import { taskStatusTone } from '../../data/events.js'
+import { taskStatusTone, TASK_STATUSES } from '../../data/events.js'
 import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
 
@@ -17,7 +17,7 @@ const BLANK_RETRO = {
   finalReconciliation: { budget: null, spent: null },
 }
 
-const ACTION_STATUSES = ['Not Started', 'In Progress', 'Blocked', 'Done']
+const ACTION_STATUSES = TASK_STATUSES
 const ACTION_LANES = ACTION_STATUSES.map((key) => ({ key, label: key }))
 
 function blankAction(existing) {

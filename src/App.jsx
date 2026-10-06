@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { events as seedEvents, deriveStatus } from './data/events.js'
+import { nextStatus, events as seedEvents, deriveStatus } from './data/events.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
 import { isFirebaseConfigured } from './lib/firebaseConfig.js'
 import {
@@ -304,6 +304,38 @@ export default function App() {
     }
   }
 
+  /**
+   * Advance a status from My Work, writing back to whichever record the row
+   * came from. Same cycle and same save path as tapping it inside the event —
+   * this view is where somebody filtered to their own name works through their
+   * list, and sending them into each event to tick one thing off was the
+   * wrong shape for it.
+   */
+  function handleWorkStatusChange(row) {
+    const event = events.find((e) => e.id === row.eventId)
+    if (!event) return
+
+    if (row.kind === 'action') {
+      const retro = event.retro
+      if (!retro) return
+      handleEventChange(event.id, {
+        retro: {
+          ...retro,
+          actions: (retro.actions ?? []).map((a) =>
+            a.id === row.itemId ? { ...a, status: nextStatus(a.status) } : a
+          ),
+        },
+      })
+      return
+    }
+
+    handleEventChange(event.id, {
+      checklist: (event.checklist ?? []).map((t) =>
+        t.id === row.itemId ? { ...t, status: nextStatus(t.status) } : t
+      ),
+    })
+  }
+
   async function handleSendDigest(scope) {
     setDigestBusy(true)
     try {
@@ -389,6 +421,7 @@ export default function App() {
             onViewChange={setView}
             onEmailCommittee={isAdmin ? () => setSendingDigest(true) : null}
             onPreviewReminders={isAdmin ? () => setPreviewing(true) : null}
+            onStatusChange={handleWorkStatusChange}
           />
         ) : (
           <Dashboard

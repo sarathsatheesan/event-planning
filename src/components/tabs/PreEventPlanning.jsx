@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { taskStatusTone } from '../../data/events.js'
+import { taskStatusTone, TASK_STATUSES } from '../../data/events.js'
 import { realignDueDates, shiftDate, ANCHOR_ORDER, ANCHOR_DAYS } from '../../data/template.js'
 import StatusPill from '../StatusPill.jsx'
 import { InlineField, InlineSelect, PersonField, RemoveButton, AddButton } from '../fields.jsx'
@@ -7,7 +7,7 @@ import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
 import KanbanBoard, { ViewToggle } from '../KanbanBoard.jsx'
 
-const STATUS_CYCLE = ['Not Started', 'In Progress', 'Blocked', 'Done']
+const STATUS_CYCLE = TASK_STATUSES
 const LANES = STATUS_CYCLE.map((key) => ({ key, label: key }))
 
 /** Short, and red when it has already gone past. */

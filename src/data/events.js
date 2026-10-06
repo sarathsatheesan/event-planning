@@ -335,6 +335,19 @@ export const statusTone = {
   Completed: 'success',
 }
 
+/**
+ * The order a task walks through when someone taps its status. One definition,
+ * because three surfaces advance it now — the milestone list, the boards, and
+ * My Work — and a cycle that differs between them would strand a task in a
+ * state the next screen cannot move it out of.
+ */
+export const TASK_STATUSES = ['Not Started', 'In Progress', 'Blocked', 'Done']
+
+export function nextStatus(current) {
+  const i = TASK_STATUSES.indexOf(current)
+  return TASK_STATUSES[(i + 1) % TASK_STATUSES.length]
+}
+
 export const taskStatusTone = {
   'Not Started': 'neutral',
   'In Progress': 'warning',
