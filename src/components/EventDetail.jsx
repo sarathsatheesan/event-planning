@@ -12,6 +12,7 @@ import ArtistSelection from './tabs/ArtistSelection.jsx'
 import DayOfCommandCenter from './tabs/DayOfCommandCenter.jsx'
 import VendorDirectory from './tabs/VendorDirectory.jsx'
 import PostEventWrapUp from './tabs/PostEventWrapUp.jsx'
+import FoodStalls from './tabs/FoodStalls.jsx'
 
 const TABS = [
   { key: 'preevent', label: 'Pre-Event Planning', phase: 'Phase 1' },
@@ -28,8 +29,12 @@ const TABS = [
  * read-only visitor looking at a blood drive never sees it.
  */
 function tabsFor(event, editable) {
-  if (!event.needsArtists && !editable) return TABS
-  return [{ key: 'artists', label: 'Artist Selection' }, ...TABS]
+  // Food stalls sit beside the artists for the same reason: both are things an
+  // event either does or does not do, and the committee books both months out.
+  const lead = []
+  if (event.needsArtists || editable) lead.push({ key: 'artists', label: 'Artist Selection' })
+  if (event.needsFoodStalls || editable) lead.push({ key: 'food', label: 'Food Stalls & Menu' })
+  return [...lead, ...TABS]
 }
 
 export default function EventDetail({
@@ -195,6 +200,12 @@ export default function EventDetail({
             onChecklistChange={(checklist, undoLabel) => onChange({ checklist }, undoLabel)}
             view={tabViews?.checklist ?? 'list'}
             onViewChange={(v) => onTabViewChange?.('checklist', v)}
+          />
+        )}
+        {activeTab === 'food' && (
+          <FoodStalls
+            event={event}
+            onVendorsChange={(foodVendors, undoLabel) => onChange({ foodVendors }, undoLabel)}
           />
         )}
         {activeTab === 'artists' && (

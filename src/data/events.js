@@ -8,6 +8,7 @@
 // checklists — null and [] render as clear empty states asking for the real thing.
 
 import { buildTemplateChecklist, TEMPLATE_CATEGORIES } from './template.js'
+import { melaFoodVendors } from './melaFood.js'
 
 /**
  * Who runs the event.
@@ -47,6 +48,11 @@ const shell = {
   // event would be noise on twelve pages to serve three.
   needsArtists: false,
   artists: [],
+  // Food stalls are off unless an event sells food — the same reasoning as
+  // artists. A chess tournament has no caterers, and an empty stall list on
+  // every event would be a dead tab on fifteen pages to serve one.
+  needsFoodStalls: false,
+  foodVendors: [],
   // { artistId, rationale, decidedOn, decidedBy } once a group is confirmed.
   artistChoice: null,
 }
@@ -158,6 +164,8 @@ export const events = [
   {
     ...shell,
     id: 'india-mela',
+    needsFoodStalls: true,
+    foodVendors: melaFoodVendors,
     theme: 'mela',
     name: 'India Mela',
     date: '2027-06-06',

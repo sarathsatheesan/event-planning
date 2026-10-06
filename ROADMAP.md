@@ -269,6 +269,43 @@ change. Cards are text, not form controls: rendering four inputs per card made
 each one 350px tall and clipped the milestone name inside a one-line box, which
 on a board is the thing you are reading. Editing the fields stays in the list.
 
+### 3h. Food stalls and menus, out of the workbook — *6 Oct 2026*
+
+India Mela's food operation lived in two sheets that had to be read side by
+side: **Food Vendors 2026** (who is coming, and how far through the paperwork
+they are) and **Food Menu2026** (what each sells, laid out as eight pairs of
+columns across the page). The question asked at every committee meeting — "is
+anyone else selling that" — could only be answered by eye.
+
+A **Food Stalls & Menu** tab now holds both, with each stall's menu under the
+stall. 24 stalls and 82 items came across. The two sheets named the same stalls
+differently — the vendor tab by organisation (`UTS`), the menu tab by trading
+name (`UTS - Chennai Express`) — so both names are kept rather than one being
+discarded. Three rows at the bottom of the vendor tab had their columns shifted
+one to the left, putting an email address in the Contact column; they are
+carried across corrected, and two of them read like business vendors rather
+than food stalls, which is for the committee to confirm.
+
+**Duplicate detection** flags a dish already offered elsewhere: red for the same
+dish at another stall, amber for a near-match worth a look. The threshold is
+0.90 rather than 0.85 because at 0.85 the real menu pairs "Masala Mor" with
+"Masala Corn" — buttermilk and sweetcorn — while the pair actually worth
+catching, "Aloo Bonda" and "Aaloo Bonda", scores 0.95. A false flag on every
+screen teaches people to ignore the flags.
+
+Testing the matcher against the real menu caught a bug that reading it would
+not have: stripping digits and bracketed contents collapsed GTA's four combos
+to the single word "combo", so they flagged each other. Digits and parentheses
+are kept; square-bracket piece counts are not.
+
+Every column with a fixed set of values is a dropdown (vendor type, status) or
+a checkbox (the eight paperwork steps), because free text in a column that only
+ever holds five values is how "Reg Org", "reg org" and "Registered Org" end up
+meaning the same thing and sorting differently. Mobile numbers were in neither
+sheet: the column exists and is empty.
+
+Like artists, the tab is off unless an event sells food.
+
 ### 4. No cross-event view — *first version shipped 1 Oct 2026*
 
 Tasks could be filtered by owner *within* one event. There was no way to ask

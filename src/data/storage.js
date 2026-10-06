@@ -58,5 +58,9 @@ export function applyOverrides(events, overrides) {
   // written by an older build — with nothing to run, nothing to re-run, and no
   // window where half the rows have it and half do not. An event saved after
   // this point persists the value for real.
-  return [...edited, ...created].map((event) => (event.org ? event : { ...event, org: DEFAULT_ORG }))
+  return [...edited, ...created].map((event) => ({
+    ...event,
+    org: event.org ?? DEFAULT_ORG,
+    foodVendors: event.foodVendors ?? [],
+  }))
 }

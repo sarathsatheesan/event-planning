@@ -57,6 +57,8 @@ export function buildEvent({ name, date, source, org }) {
     needsArtists: false,
     artists: [],
     artistChoice: null,
+    needsFoodStalls: false,
+    foodVendors: [],
   }
 
   if (!source) return base
@@ -85,6 +87,21 @@ export function buildEvent({ name, date, source, org }) {
     // year's outstanding balance is not this year's problem.
     vendors: (source.vendors ?? []).map((vendor) => ({ ...vendor, balance: 0 })),
     needsArtists: source.needsArtists ?? false,
+    // Same stalls, same menus — that is the point of copying last year. The
+    // paperwork trail resets, because none of it has happened yet this year.
+    needsFoodStalls: source.needsFoodStalls ?? false,
+    foodVendors: (source.foodVendors ?? []).map((vendor) => ({
+      ...vendor,
+      confirmed: '',
+      attendedMeeting1: false,
+      attendedCityMeeting: false,
+      posMeeting: false,
+      menuProvided: false,
+      poster: false,
+      depositPaid: false,
+      stallPayment: false,
+      finalSettlement: false,
+    })),
     // Deliberately not copied: spent, retro, artists and the artist choice.
     // A new cycle means new quotes, new candidates and an unwritten wrap-up.
   }
