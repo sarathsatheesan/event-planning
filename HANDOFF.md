@@ -118,6 +118,13 @@ functions` if `functions/` changed) comes after all three.
   of what was changed and why.
   `Category` is a new column with no counterpart in the sheet and is blank on
   all 77 rows on purpose.
+  **Whether a sponsor has paid is derived, not stored** — `isPaid()` in
+  `src/data/sponsors.js` reads "Paid by" or "Paid on". The workbook's separate
+  *Payment Rcvd* column carried nothing the mode did not: in the 2023 sheet the
+  two were filled together on every row and never apart, and the date column
+  was never filled at all. A stored flag could only ever agree with those two
+  or contradict them. `isPaid` still reads a legacy `paymentReceived` as a last
+  term, so a tick made before this changed is honoured.
 - **Wrap-up follow-ups** — `event.retro.actions[]`, shape
   `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and

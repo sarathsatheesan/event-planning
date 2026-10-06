@@ -2,6 +2,7 @@
 import { filterEvents, yearsIn, orgsIn, statusesIn, activeCount, EMPTY_FILTERS, ALL } from './filters.js'
 import { events as seedEvents, deriveStatus } from '../data/events.js'
 import { applyOverrides } from '../data/storage.js'
+import { isPaid } from '../data/sponsors.js'
 
 let fails = 0
 const check = (label, actual, expected) => {
@@ -65,7 +66,14 @@ check('and India Mela keeps its own through an override', legacy.find((e) => e.i
   check('four agreed', agreed.length, 4)
   check('nothing tiered that did not agree', mela.filter((s) => s.tier && s.response !== 'Agreed').length, 0)
   check('$8,250 pledged', agreed.reduce((n, s) => n + s.amount, 0), 8250)
-  check('and all of it received', agreed.every((s) => s.paymentReceived), true)
+  check('and all of it received', agreed.every(isPaid), true)
+  // Derived from "Paid by"/"Paid on", not a third field that can disagree.
+  check('nothing stores a received flag any more', mela.some((s) => 'paymentReceived' in s), false)
+  check('a mode alone counts as paid', isPaid({ mode: 'ICC Wix' }), true)
+  check('a date alone counts as paid', isPaid({ datePaid: '2026-10-03' }), true)
+  check('an amount with neither does not', isPaid({ amount: 2000, response: 'Agreed' }), false)
+  check('an old stored tick is still honoured', isPaid({ paymentReceived: true }), true)
+  check('an empty sponsor is not paid', isPaid({}), false)
   check('no tier left sitting in the person column', mela.filter((s) => ['Title', 'Gold', 'Platinum'].includes(s.templePoc)).length, 0)
   check('no outcome left sitting in the person column', mela.filter((s) => /declined|no response/i.test(s.templePoc)).length, 0)
   check('Sagar kept the reason he declined', mela.find((s) => s.name === 'Sagar').comments, 'Will open a Vendor stall for HVAC')

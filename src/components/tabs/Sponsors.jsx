@@ -8,6 +8,7 @@ import {
   AddButton,
 } from '../fields.jsx'
 import { nextId } from '../../lib/records.js'
+import { isPaid } from '../../data/sponsors.js'
 import { useEditable } from '../../lib/editing.js'
 
 /**
@@ -78,7 +79,6 @@ const BLANK = {
   amount: null,
   phone: '',
   email: '',
-  paymentReceived: false,
   mode: '',
   datePaid: '',
   nameOnCheck: '',
@@ -117,7 +117,7 @@ export default function Sponsors({ event, onSponsorsChange }) {
       if (s.response === 'Agreed') {
         agreedCount++
         agreed += Number(s.amount) || 0
-        if (s.paymentReceived) received += Number(s.amount) || 0
+        if (isPaid(s)) received += Number(s.amount) || 0
       }
       if (!s.templePoc) unowned++
     }
@@ -128,6 +128,7 @@ export default function Sponsors({ event, onSponsorsChange }) {
     if (filter === 'All') return true
     if (filter === 'Nobody on it') return !s.templePoc
     if (filter === 'Open') return !s.response || s.response === 'Interested'
+    if (filter === 'Awaiting payment') return s.response === 'Agreed' && !isPaid(s)
     return s.response === filter
   })
 
@@ -165,7 +166,7 @@ export default function Sponsors({ event, onSponsorsChange }) {
     )
   }
 
-  const FILTERS = ['All', 'Open', 'Agreed', 'Declined', 'No response', 'Nobody on it']
+  const FILTERS = ['All', 'Open', 'Agreed', 'Awaiting payment', 'Declined', 'No response', 'Nobody on it']
 
   return (
     <div>
@@ -391,20 +392,20 @@ export default function Sponsors({ event, onSponsorsChange }) {
                   </dl>
 
                   <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                    <label
-                      className={`flex items-center gap-1.5 text-xs ${
-                        s.paymentReceived ? 'text-ink' : 'text-ink-soft'
-                      } ${editable ? 'cursor-pointer' : ''}`}
+                    {/* Said, not ticked. Filling "Paid by" or "Paid on" is
+                        what records the money arriving; a separate box could
+                        only ever agree or contradict. */}
+                    <span
+                      className={`text-xs font-semibold ${
+                        isPaid(s) ? 'text-success' : 'text-ink-soft'
+                      }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={Boolean(s.paymentReceived)}
-                        disabled={!editable}
-                        onChange={(e) => patch(s.id, { paymentReceived: e.target.checked })}
-                        className="focus-ring h-3.5 w-3.5 accent-[var(--accent)]"
-                      />
-                      Payment received
-                    </label>
+                      {isPaid(s)
+                        ? `Received${s.mode ? ` by ${s.mode.toLowerCase()}` : ''}`
+                        : s.response === 'Agreed'
+                          ? 'Pledged, not yet received'
+                          : 'No payment recorded'}
+                    </span>
                     {ARTEFACTS.map((a) => (
                       <label
                         key={a.key}

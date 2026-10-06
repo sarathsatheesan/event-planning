@@ -99,10 +99,10 @@ export const melaSponsors = [
   { id: 70, name: 'Lego store', templePoc: 'Ashwin' },
   { id: 71, name: 'Kindergarten next to Biscoff' },
   { id: 72, name: 'Danecstudio opposite to GoldFish' },
-  { id: 73, name: 'Sunnyhill Financials', response: 'Agreed', tier: 'Title', amount: 3000, paymentReceived: true, mode: 'Check', datePaid: '2026-10-03' },
-  { id: 74, name: 'Investment Path Finders (Milind Zodge)', response: 'Agreed', tier: 'Platinum', amount: 2000, paymentReceived: true, mode: 'ICC Wix' },
-  { id: 75, name: 'Maisa Wealth (Suraj)', response: 'Agreed', tier: 'Gold', amount: 1250, paymentReceived: true, mode: 'ICC Wix' },
-  { id: 76, name: 'NJRA', response: 'Agreed', tier: 'Platinum', amount: 2000, paymentReceived: true, mode: 'Check', datePaid: '2026-09-18' },
+  { id: 73, name: 'Sunnyhill Financials', response: 'Agreed', tier: 'Title', amount: 3000, mode: 'Check', datePaid: '2026-10-03' },
+  { id: 74, name: 'Investment Path Finders (Milind Zodge)', response: 'Agreed', tier: 'Platinum', amount: 2000, mode: 'ICC Wix' },
+  { id: 75, name: 'Maisa Wealth (Suraj)', response: 'Agreed', tier: 'Gold', amount: 1250, mode: 'ICC Wix' },
+  { id: 76, name: 'NJRA', response: 'Agreed', tier: 'Platinum', amount: 2000, mode: 'Check', datePaid: '2026-09-18' },
   { id: 77, name: 'Family Pediatric' },
 ]
 
@@ -124,3 +124,20 @@ export const melaSponsors = [
 export const sponsorProspects = Object.freeze(
   melaSponsors.map((s) => Object.freeze({ id: s.id, name: s.name }))
 )
+
+/**
+ * Has the money arrived?
+ *
+ * Derived, not stored. "Paid by" and "Paid on" already say it: in the
+ * committee's own 2023 sheet, Payment Rcvd and Mode of Payment were filled
+ * together on every row and never apart, and the date column was never filled
+ * at all. A third field that can disagree with those two is not a record, it
+ * is a thing to reconcile.
+ *
+ * Either signal counts, because neither is written speculatively — nobody
+ * fills in how a sponsor paid before they have paid. `paymentReceived` is read
+ * as a last term so a tick made before this changed is still honoured.
+ */
+export function isPaid(sponsor) {
+  return Boolean(sponsor?.datePaid || sponsor?.mode || sponsor?.paymentReceived)
+}
