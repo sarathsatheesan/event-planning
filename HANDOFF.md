@@ -1,7 +1,6 @@
 # EventOps — handoff
 
-India Cultural Center of Utah · last updated 1 October 2026, with the per-person
-reminders change · `main`
+India Cultural Center of Utah · last updated 6 October 2026 · `main`
 
 <!-- No commit hash here on purpose: this file is edited in the same commit it
      would name, so any hash written above is wrong the moment it is committed.
@@ -11,6 +10,34 @@ reminders change · `main`
 Operational state and the things that cost time to learn. Product direction and
 the ranked gap list live in [ROADMAP.md](./ROADMAP.md); this file is for
 whoever has to run, deploy or debug the thing.
+
+---
+
+## After every change — three things, not one
+
+A shipped change is not finished when it is committed. Three records go stale
+otherwise, and each of them is read by someone who was not in the room:
+
+1. **This file.** Anything that changed where data lives, how something
+   deploys, or that cost time to work out. New gotchas go in the gotchas
+   section with what the symptom looked like, not just the fix.
+2. **The project memory** — the `Event Planning` project doc
+   `claude/eventops-handoff.md`, which is this file's content. Overwrite it
+   with the updated HANDOFF.md rather than hand-editing a second copy; two
+   drifting versions are worse than one stale one.
+3. **The status dashboard** — `eNoVo_Feature_Dashboard/index.html`, the
+   `"EventOps"` entry in the `PRODUCTS` registry. Add or flip the feature rows
+   (`features`), add a dated `calendar` entry for anything a reader would call
+   a milestone, and refresh `EVENTOPS_CODEBASE` line counts and the tagline.
+   Feature text is **escaped** when rendered — write real `’ “ ” —`
+   characters, never HTML entities, which is the opposite of `lede`, `meta`
+   and `footer` on the same object. Check any new `MODULE_ICONS` name actually
+   exists in that page's lucide build: a missing one renders as blank space,
+   and the way to find it is to query the DOM for `[data-lucide]` elements with
+   no child `<svg>`.
+
+The deploy itself (`./push-to-github.sh`, then `firebase deploy --only
+functions` if `functions/` changed) comes after all three.
 
 ---
 
@@ -41,6 +68,11 @@ whoever has to run, deploy or debug the thing.
   (flat lower-case lists the security rules read) and `members` (for the UI).
   Managed in-app via the **Committee** button. No longer in source.
 - **Artist files** — Cloud Storage under `artistPosters/` and `artistBios/`.
+- **Food stalls** — `event.foodVendors[]`, each with a nested `menu[]`. Gated by
+  `event.needsFoodStalls`, like artists. India Mela's 24 stalls and 82 items are
+  seeded in `src/data/melaFood.js`, consolidated from the committee's workbook
+  (tabs *Food Vendors 2026* and *Food Menu2026*). Duplicate detection lives in
+  `src/lib/menu.js` and is tested against that real menu.
 - **Wrap-up follow-ups** — `event.retro.actions[]`, shape
   `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
@@ -51,9 +83,9 @@ whoever has to run, deploy or debug the thing.
 - **Mail sender config** — `functions/.env`, committed on purpose. It holds the
   from-address, which is printed on every email anyway.
 
-## The two functions
+## The three functions
 
-Both 2nd gen, Node 22, `us-central1` — the client calls that region explicitly,
+All 2nd gen, Node 22, `us-central1` — the client calls that region explicitly,
 so a region change needs the client updated or calls 404.
 
 - `weeklyDigest` — Cloud Scheduler, `0 8 * * 1` **America/Denver**. Sends
@@ -69,6 +101,10 @@ so a region change needs the client updated or calls 404.
   data, and **binds no secret**, so it has no SMTP password and cannot send. Use
   it instead of a Force run when the question is "who would get this".
 
+Wrap-up follow-ups (`event.retro.actions[]`) are chased alongside milestones and
+come from **every** event including completed ones — a follow-up outlives its
+event.
+
 Digest windows: **7 days** forward for tasks, **14 days** for events,
 **unbounded** backwards for overdue, **12 rows** shown per section. Completed
 events excluded unless the manual send asks for "Everything".
@@ -77,10 +113,10 @@ The shared overview goes **to** the ICC inbox with the committee **bcc'd** —
 not thirty addresses in the To line. A personal reminder goes straight **to**
 that one person with `replyTo` on the ICC inbox and nobody copied.
 
-`npm test` at the repo root covers the calendar filters and the org backfill;
-`npm test` in `functions/` covers the digests and runs against the **immutable
-seed**, not Firestore.
-It cannot see owners assigned in the app — only **Preview Monday** can.
+`npm test` at the repo root covers the calendar filters, the org backfill and
+the menu-duplicate matcher; `npm test` in `functions/` covers the digests and
+runs against the **immutable seed**, not Firestore — neither can see owners
+assigned in the app, which is what **Preview Monday** is for.
 
 A partially failed weekly run is **not** retried: the schedule throws only when
 every send failed. Retrying a partial run would re-send to everyone who already
@@ -152,13 +188,18 @@ would have shipped `Â·` to every recipient. Look at output, do not just assert
 
 Full list in ROADMAP.md. The ones most likely to matter next:
 
-- **31 overdue milestones have no owner.** The assignee picker makes this quick,
-  but somebody has to do the pass once. Until then every digest says
-  "Unassigned — 31".
-- **Per-person reminders** are unblocked now that milestones carry an owner's
-  address, but not built.
+- **31 overdue milestones have no owner**, and whatever **Preview Monday** lists
+  under *Assigned to nobody real* — a typed name matching no committee member.
+  Until both are cleared the Monday run reaches only admins. This is data entry,
+  not code, and it is the single thing standing between the reminder system and
+  any effect.
+- **Three rows in the Mela food vendor sheet had shifted columns** and two of
+  them read like business vendors rather than food stalls. Carried across
+  corrected; the committee should confirm whether they belong.
 - **Signed-out visitors see seed data, not the real plan**, because the rules
   require membership to read. This makes the Day-Of Command Center unusable by
   the floor volunteers it was designed for. Decision deferred deliberately.
 - **No offline support on the day-of view**, which is the one hour the app must
   not fail.
+- **Per-organisation permissions.** Events carry an org (ICC / Temple) but
+  access does not distinguish them: every committee member can edit both.
