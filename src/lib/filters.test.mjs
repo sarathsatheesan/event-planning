@@ -45,10 +45,19 @@ console.log('\n--- the sponsors backfill ---')
 // Same shape of promise as org: a record written before the field existed
 // reads as an empty list, not undefined, so the tab never has to guess.
 check('every seed event has a sponsors array', materialised.every((e) => Array.isArray(e.sponsors)), true)
-check('and only India Mela has names on it', materialised.filter((e) => e.sponsors.length).map((e) => e.id), ['india-mela'])
-check('77 of them', materialised.find((e) => e.id === 'india-mela').sponsors.length, 77)
-check('an old override reads as an empty list', Array.isArray(legacy.find((e) => e.id === 'evt-old').sponsors), true)
-check('and India Mela keeps its list through an override', legacy.find((e) => e.id === 'india-mela').sponsors.length, 77)
+check('all 15 start from the same 77 businesses', materialised.every((e) => e.sponsors.length === 77), true)
+check('an old override still gets the list', legacy.find((e) => e.id === 'evt-old').sponsors.length, 77)
+check('and India Mela keeps its own through an override', legacy.find((e) => e.id === 'india-mela').sponsors.length, 77)
+// The list travels; one event's results do not. $8,250 was pledged to the
+// Mela, and it must not appear as received on the other fourteen.
+{
+  const mela = materialised.find((e) => e.id === 'india-mela').sponsors
+  const others = materialised.filter((e) => e.id !== 'india-mela')
+  check('the same names everywhere', others.every((e) => e.sponsors.every((s, i) => s.name === mela[i].name)), true)
+  check('nothing agreed anywhere else', others.every((e) => e.sponsors.every((s) => !s.response)), true)
+  check('no money anywhere else', others.reduce((n, e) => n + e.sponsors.reduce((m, s) => m + (s.amount ?? 0), 0), 0), 0)
+  check('nobody assigned anywhere else', others.every((e) => e.sponsors.every((s) => !s.templePoc)), true)
+}
 // The four the committee has actually closed, after the column drift was undone.
 {
   const mela = materialised.find((e) => e.id === 'india-mela').sponsors

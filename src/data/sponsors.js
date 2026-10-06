@@ -103,4 +103,24 @@ export const melaSponsors = [
   { id: 74, name: 'Investment Path Finders (Milind Zodge)', response: 'Agreed', tier: 'Platinum', amount: 2000, paymentReceived: true, mode: 'ICC Wix' },
   { id: 75, name: 'Maisa Wealth (Suraj)', response: 'Agreed', tier: 'Gold', amount: 1250, paymentReceived: true, mode: 'ICC Wix' },
   { id: 76, name: 'NJRA', response: 'Agreed', tier: 'Platinum', amount: 2000, paymentReceived: true, mode: 'Check', datePaid: '2026-09-18' },
-  { id: 77, name: 'Family Pediatric' },]
+  { id: 77, name: 'Family Pediatric' },
+]
+
+/**
+ * The same businesses, with India Mela's outcomes stripped off.
+ *
+ * Every event starts from this list so the committee never retypes seventy-
+ * seven names, but only the names carry over. Who approached them, what they
+ * said, what they pledged and whether the money arrived all belong to one
+ * event: Sunnyhill's $3,000 was for the Mela, and showing it as received on
+ * Republic Day would put $8,250 of somebody else's money on twelve pages.
+ *
+ * Same principle the app already applies when an event is created from a
+ * previous one — the plan is copied, the results are not.
+ *
+ * Frozen because all fifteen events share this one array. Nothing mutates it
+ * today (every edit replaces the list), and freezing is what keeps that true.
+ */
+export const sponsorProspects = Object.freeze(
+  melaSponsors.map((s) => Object.freeze({ id: s.id, name: s.name }))
+)

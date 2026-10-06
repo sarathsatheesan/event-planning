@@ -94,9 +94,21 @@ functions` if `functions/` changed) comes after all three.
   than letting the next save eat it. Keep that guard if the list changes again.
 - **Sponsors** — `event.sponsors[]`, on **every** event rather than gated by a
   flag like artists and food stalls. India Mela's 77 are seeded in
-  `src/data/sponsors.js`, from the workbook's *2026 Sponsors* tab. Absent on
-  records written before 6 Oct 2026; read it as `event.sponsors ?? []`, which
-  `applyOverrides` already does.
+  `src/data/sponsors.js`, from the workbook's *2026 Sponsors* tab.
+  **Every event starts from the same 77.** The shell and the read-time default
+  both point at `sponsorProspects` — `melaSponsors` with the outcomes stripped,
+  names only. The list belongs to the ICC; who approached them, what they
+  pledged and whether it arrived belong to one event, and showing the Mela's
+  $8,250 as received on Republic Day would put the same money on twelve pages.
+  India Mela overrides the default with the full list.
+  The fallback in `applyOverrides` is `??`, not `||`, so an event whose list is
+  deliberately cleared stays cleared rather than refilling on the next load.
+  `sponsorProspects` is frozen because all fifteen events share the one array.
+  One consequence worth knowing: editing a single sponsor on an event writes
+  all 77 into that event's override document — about 20KB, well inside
+  Firestore's 1MB limit, but it is why there are fifteen copies of the list
+  rather than one shared document. A real sponsor directory with per-event
+  outreach pointing at it is the shape to move to if this gets heavier.
   The sheet's columns had drifted from its own headers and the seed is not a
   straight copy — *Contacted* held who made the approach (now the single person
   column, **Temple POC**, on the roster dropdown), *Temple POC* held the
