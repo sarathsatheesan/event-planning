@@ -79,7 +79,16 @@ functions` if `functions/` changed) comes after all three.
   before it — read it as `vendor.specialRequests ?? ''`. Neither workbook tab
   had such a column; the only request it records came off the *2026 Food Stall
   ICC Prep Work* sheet, and only The Melting Mango's survived into a stall.
-  `BAPS` was retired from the type list the same day and Aroma's value cleared,
+  Menus can be imported rather than typed: `src/lib/menuImport.js` is the pure
+  parser (text or a grid of cells in, candidate dishes out) and
+  `src/lib/menuFiles.js` the three file shells. `read-excel-file` and
+  `pdfjs-dist` are **dynamically imported**, so they are separate chunks
+  (45KB and 431KB) that a visitor opening the calendar never downloads — keep
+  them that way. Two upgrade traps are written into the code comments: since
+  read-excel-file v9 the default export returns every sheet, so the call is
+  `readSheet`, and in pdfjs v6 `destroy` lives on the loading task, not the
+  document proxy.
+  `BAPS` was retired from the type list and Aroma's value cleared,
   but `InlineSelect` would silently blank any value the list no longer offers,
   so `FoodStalls` appends an unknown stored type back onto the options rather
   than letting the next save eat it. Keep that guard if the list changes again.
@@ -155,11 +164,20 @@ addresses are in the logs — search `Reminder send failed`.
    `rm -rf .git/_stale` on every run. The `unable to unlink ... Operation not
    permitted` warnings that follow a successful command are noise; confirm with
    `git log --oneline -1`.
-2. **The mount drops the executable bit.** `./push-to-github.sh` fails with
+2. **`sr-only` inside a horizontally scrolling strip drags the whole page
+   sideways.** `sr-only` is `position: absolute`, so with no positioned
+   ancestor its containing block is the page. A lane sitting 8,000px along the
+   menu board put its remove buttons' hidden labels 8,000px along the
+   *document*, and the page scrolled: the header slid away and left white
+   space. Every lane measured the right width and `document.body.scrollWidth`
+   stayed at 390, which is why it took a while to find — only
+   `document.documentElement.scrollWidth` showed it. Any lane, card or row
+   that holds a `RemoveButton` needs `relative` on it.
+3. **The mount drops the executable bit.** `./push-to-github.sh` fails with
    `Permission denied` after a session has touched the folder. `bash
    push-to-github.sh` always works; `chmod +x` plus
    `git update-index --chmod=+x` fixes it for the next clone.
-3. **This Mac has two GitHub accounts, and git picks the wrong one.**
+4. **This Mac has two GitHub accounts, and git picks the wrong one.**
    `itbeginsfromutah` is the eNoVo business account (owns the `enovoapp` org);
    `sarathsatheesan` is personal and owns **this** repo. Asked for "a
    github.com credential" the keychain returns the business one, and the push
@@ -171,26 +189,26 @@ addresses are in the logs — search `Reminder send failed`.
    `git credential-osxkeychain erase` — that logs you out of the business
    account too. To check which account is cached:
    `security find-internet-password -s github.com | grep acct`.
-4. **`cd "~/Event Planning/eventops"` does not work** — `~` is not expanded
+5. **`cd "~/Event Planning/eventops"` does not work** — `~` is not expanded
    inside quotes. Use `cd ~/"Event Planning/eventops"`.
-5. **Hosting header globs match the path the browser requested**, before any
+6. **Hosting header globs match the path the browser requested**, before any
    rewrite. A rule on `/index.html` never matches a visit to `/`, so the
    no-cache header silently did nothing and deploys appeared not to land for up
    to an hour. Both paths are listed now. If "my change isn't live" ever
    returns, check the live `Cache-Control` header before blaming the browser.
-6. **`firebase functions:secrets:destroy KEY` with no `@version` destroys the
+7. **`firebase functions:secrets:destroy KEY` with no `@version` destroys the
    latest version.** Always name the version.
-7. **`functions:secrets:prune` diffs against *deployed* functions.** With
+8. **`functions:secrets:prune` diffs against *deployed* functions.** With
    nothing deployed it considers every version unused, including the current
    one. Deploy first, prune after.
-8. **Cloud Run creation fails with a generic "internal error" if APIs were
+9. **Cloud Run creation fails with a generic "internal error" if APIs were
    enabled in the same run.** Wait a few minutes and re-run; it is propagation,
    not a real failure.
-9. **Pushing anything under `.github/workflows/` needs the `workflow` scope** on
+10. **Pushing anything under `.github/workflows/` needs the `workflow` scope** on
    the PAT, or GitHub refuses the push.
-10. **Firebase Extensions shuts down 31 March 2027.** Do not adopt one. Mail is
+11. **Firebase Extensions shuts down 31 March 2027.** Do not adopt one. Mail is
    sent directly from the function with nodemailer for this reason.
-11. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
+12. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
    Now one Firestore document. What remains in source is the permanent owner
    `utahindiacc@gmail.com` — hardcoded in both rule files so the committee can
    never lock itself out — and a pre-roster fallback.
@@ -230,6 +248,9 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   the floor volunteers it was designed for. Decision deferred deliberately.
 - **No offline support on the day-of view**, which is the one hour the app must
   not fail.
+- **A scanned PDF menu cannot be read** and the dialog says so rather than
+  importing nothing silently. OCR would fix it and is not worth the weight;
+  the answer is to ask the vendor for a spreadsheet.
 - **The food-stall paperwork checkboxes render as disabled inputs** for a
   signed-out visitor, where every other field renders as text. 192 dead
   controls on India Mela's tab. Pre-dates the food work and is cosmetic, but it

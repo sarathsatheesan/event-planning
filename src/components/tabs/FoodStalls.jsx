@@ -6,6 +6,7 @@ import { findClashes, clashCounts, stallClashLevel } from '../../lib/menu.js'
 import { CLASH_TONE } from '../../lib/clashTone.js'
 import { ViewToggle } from '../KanbanBoard.jsx'
 import MenuBoard from '../MenuBoard.jsx'
+import MenuImportDialog from '../MenuImportDialog.jsx'
 
 /**
  * Food stalls and their menus, for an event that sells food.
@@ -68,6 +69,8 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
   const vendors = event.foodVendors ?? NO_VENDORS
   const [open, setOpen] = useState(() => new Set())
   const [filter, setFilter] = useState('All')
+  // Which stall is having a menu imported into it, if any.
+  const [importing, setImporting] = useState(null)
 
   const clashes = useMemo(() => findClashes(vendors), [vendors])
   const counts = clashCounts(clashes)
@@ -96,9 +99,14 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
     setOpen((prev) => new Set(prev).add(id))
   }
   function addItem(vendor) {
+    addItems(vendor, [{ item: '', price: null }])
+  }
+  /** One path for a typed dish and for eighty imported ones. */
+  function addItems(vendor, entries) {
     const allItems = vendors.flatMap((v) => v.menu ?? [])
+    let next = nextId(allItems)
     patchVendor(vendor.id, {
-      menu: [...(vendor.menu ?? []), { id: nextId(allItems), item: '', price: null }],
+      menu: [...(vendor.menu ?? []), ...entries.map((e) => ({ id: next++, ...e }))],
     })
     setOpen((prev) => new Set(prev).add(vendor.id))
   }
@@ -149,6 +157,15 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
             {onViewChange && (
               <ViewToggle view={view} onChange={onViewChange} boardLabel="Menu board" />
             )}
+            {editable && (
+              <button
+                type="button"
+                onClick={addVendor}
+                className="focus-ring whitespace-nowrap rounded-md border border-dashed border-border px-2.5 py-1 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+              >
+                + Add a stall
+              </button>
+            )}
           </div>
         </div>
 
@@ -172,9 +189,24 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
       </div>
 
       {view === 'board' ? (
-        <MenuBoard vendors={vendors} clashes={clashes} />
+        <div key="board" className="view-fade">
+          <MenuBoard
+            vendors={vendors}
+            clashes={clashes}
+            onItemChange={patchItem}
+            onItemRemove={(vendorId, itemId) =>
+              patchVendor(vendorId, {
+                menu: (vendors.find((v) => v.id === vendorId)?.menu ?? []).filter(
+                  (m) => m.id !== itemId
+                ),
+              })
+            }
+            onAddItem={(vendorId) => addItem(vendors.find((v) => v.id === vendorId))}
+            onImport={(vendorId) => setImporting(vendors.find((v) => v.id === vendorId))}
+          />
+        </div>
       ) : (
-        <>
+        <div key="list" className="view-fade">
       <ul className="flex flex-col gap-3">
         {shown.map((vendor) => {
           const isOpen = open.has(vendor.id)
@@ -404,8 +436,19 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
                       </ul>
                     )}
                     {editable && (
-                      <div className="mt-2 sm:max-w-xs">
-                        <AddButton onClick={() => addItem(vendor)}>Add a menu item</AddButton>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="sm:max-w-xs sm:flex-1">
+                          <AddButton onClick={() => addItem(vendor)}>Add a menu item</AddButton>
+                        </div>
+                        {/* Eighty dishes one at a time is why the Food Menu tab
+                            of the workbook took a season to fill. */}
+                        <button
+                          type="button"
+                          onClick={() => setImporting(vendor)}
+                          className="focus-ring whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+                        >
+                          Import from a file or paste
+                        </button>
                       </div>
                     )}
                   </div>
@@ -421,13 +464,16 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
           No stalls match this filter.
         </div>
       )}
-        </>
+        </div>
       )}
 
-      {editable && (
-        <div className="mt-4 sm:max-w-md">
-          <AddButton onClick={addVendor}>Add a stall</AddButton>
-        </div>
+      {importing && (
+        <MenuImportDialog
+          vendor={importing}
+          vendors={vendors}
+          onAdd={(entries) => addItems(importing, entries)}
+          onClose={() => setImporting(null)}
+        />
       )}
     </div>
   )

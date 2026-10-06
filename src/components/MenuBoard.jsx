@@ -8,8 +8,11 @@
  * deliberately left out; they are a different conversation, and the list view
  * is one tap away.
  *
- * It is read-only on purpose. It is a review surface, not a second place to
- * edit the same records — two editable views of one list is how they drift.
+ * Dishes are editable here as well as in the list. They are the same records
+ * either way — the board renders the event's own menu arrays, so a correction
+ * made while comparing two stalls side by side is the correction, not a copy
+ * of one. Prices stay out: this view answers "is anybody else selling that",
+ * and the list is one tap away for the rest.
  *
  * Not built on KanbanBoard despite looking like one. That component is about
  * statuses: every card carries a control that moves it between lanes, and a
@@ -19,12 +22,24 @@
 
 import { stallClashLevel } from '../lib/menu.js'
 import { CLASH_TONE } from '../lib/clashTone.js'
+import { useEditable } from '../lib/editing.js'
+import { InlineField, RemoveButton, AddButton } from './fields.jsx'
 
 // Static class name so Tailwind keeps it in the build.
 const GRID = 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
 
-export default function MenuBoard({ vendors, clashes }) {
-  const withMenus = vendors.filter((v) => (v.menu?.length ?? 0) > 0)
+export default function MenuBoard({
+  vendors,
+  clashes,
+  onItemChange,
+  onItemRemove,
+  onAddItem,
+  onImport,
+}) {
+  const editable = useEditable()
+  // An editor needs the empty stalls too — that is where a menu gets typed in.
+  // A viewer does not: a column of nothing is noise on a review screen.
+  const withMenus = editable ? vendors : vendors.filter((v) => (v.menu?.length ?? 0) > 0)
   const missing = vendors.length - withMenus.length
 
   if (withMenus.length === 0) {
@@ -48,7 +63,14 @@ export default function MenuBoard({ vendors, clashes }) {
           return (
             <section
               key={vendor.id}
-              className={`flex w-[85vw] shrink-0 snap-center flex-col rounded-xl border p-2 sm:w-auto sm:shrink ${
+              // `relative` is load-bearing, not decoration. The remove
+              // buttons carry a visually-hidden label, and `sr-only` is
+              // `position: absolute`. With no positioned ancestor those labels
+              // resolve against the page, so a lane sitting 8,000px along the
+              // strip drags the whole document sideways with it — the page
+              // scrolls, the header slides off, and the board itself looks
+              // innocent because every lane measures the right width.
+              className={`relative flex w-[85vw] shrink-0 snap-center flex-col rounded-xl border p-2 sm:w-auto sm:shrink ${
                 tone ? tone.card : 'border-border bg-paper'
               }`}
             >
@@ -85,7 +107,22 @@ export default function MenuBoard({ vendors, clashes }) {
                         itemTone ? itemTone.row : 'border-transparent bg-surface'
                       }`}
                     >
-                      <p className="text-ink">{entry.item || <span className="italic opacity-60">Unnamed dish</span>}</p>
+                      <div className="flex items-start gap-1">
+                        <div className="min-w-0 flex-1">
+                          <InlineField
+                            value={entry.item}
+                            onChange={(v) => onItemChange?.(vendor.id, entry.id, { item: v })}
+                            placeholder="Dish"
+                            className="w-full text-sm text-ink"
+                          />
+                        </div>
+                        {editable && (
+                          <RemoveButton
+                            onClick={() => onItemRemove?.(vendor.id, entry.id)}
+                            title="Remove this item"
+                          />
+                        )}
+                      </div>
                       {clash && (
                         <p className={`pt-0.5 text-xs font-medium ${itemTone.text}`}>
                           {clash.level === 'duplicate' ? 'Also at ' : 'Similar to '}
@@ -96,6 +133,19 @@ export default function MenuBoard({ vendors, clashes }) {
                   )
                 })}
               </ul>
+
+              {editable && (
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <AddButton onClick={() => onAddItem?.(vendor.id)}>Add a dish</AddButton>
+                  <button
+                    type="button"
+                    onClick={() => onImport?.(vendor.id)}
+                    className="focus-ring rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+                  >
+                    Import from a file or paste
+                  </button>
+                </div>
+              )}
             </section>
           )
         })}

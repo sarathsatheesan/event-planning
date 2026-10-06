@@ -8,14 +8,16 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node src/lib/filters.test.mjs && node src/lib/menu.test.mjs"
+    "test": "node src/lib/filters.test.mjs && node src/lib/menu.test.mjs && node src/lib/menuImport.test.mjs"
   },
   "dependencies": {
     "firebase": "^12.18.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "read-excel-file": "^9.3.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

@@ -142,6 +142,25 @@ h1, h2, h3, .font-display {
   font-variant-numeric: tabular-nums;
 }
 
+/* Swapping the Food Stalls list for the menu board replaces the whole screen
+   at once. Without this the columns appear where the cards were, which reads
+   as a page that reloaded rather than a view that changed. The reduced-motion
+   block below flattens it to nothing, which is why this is an animation rather
+   than a hand-rolled timer. */
+.view-fade {
+  animation: view-fade 180ms ease-out;
+}
+@keyframes view-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
