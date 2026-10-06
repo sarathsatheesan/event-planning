@@ -8,7 +8,14 @@
 
 set -euo pipefail
 
-REMOTE_URL="https://github.com/sarathsatheesan/event-planning.git"
+# The username is part of the URL on purpose. This Mac has two GitHub accounts
+# in its keychain — itbeginsfromutah (the eNoVo business account, which owns the
+# enovoapp org) and sarathsatheesan (personal, which owns THIS repo). Without a
+# username git asks the keychain for "a github.com credential" and gets the
+# business one, which has no access here: "Permission denied to
+# itbeginsfromutah", 403. With it, each account gets its own keychain entry and
+# both keep working.
+REMOTE_URL="https://sarathsatheesan@github.com/sarathsatheesan/event-planning.git"
 BRANCH="main"
 
 cd "$(dirname "$0")"
