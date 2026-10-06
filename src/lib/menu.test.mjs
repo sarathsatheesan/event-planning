@@ -1,5 +1,5 @@
 // Run with: node src/lib/menu.test.mjs
-import { normaliseItem, similarity, findClashes, clashCounts } from './menu.js'
+import { normaliseItem, similarity, findClashes, clashCounts, stallClashLevel } from './menu.js'
 import { melaFoodVendors } from '../data/melaFood.js'
 
 let fails = 0
@@ -73,6 +73,22 @@ check('a blank item name is ignored', findClashes([
   { id: 1, stall: 'A', menu: [{ id: 1, item: '' }] },
   { id: 2, stall: 'B', menu: [{ id: 2, item: '  ' }] },
 ]).size, 0)
+
+console.log('\n--- tinting a whole stall ---')
+{
+  // One stall sells a dish outright duplicated elsewhere and another that is
+  // only a near match. The card has to read as the worse of the two.
+  const mixed = [
+    { id: 1, stall: 'A', menu: [{ id: 1, item: 'Samosa' }, { id: 2, item: 'Aloo Bonda' }] },
+    { id: 2, stall: 'B', menu: [{ id: 3, item: 'samosa' }] },
+    { id: 3, stall: 'C', menu: [{ id: 4, item: 'Aaloo Bonda' }] },
+  ]
+  const c = findClashes(mixed)
+  check('red beats amber on the same stall', stallClashLevel(mixed[0], c), 'duplicate')
+  check('a near match alone is amber', stallClashLevel(mixed[2], c), 'similar')
+  check('a clean stall is not tinted', stallClashLevel({ id: 9, menu: [{ id: 9, item: 'Chai' }] }, c), null)
+  check('an empty stall is not tinted', stallClashLevel({ id: 9 }, c), null)
+}
 
 console.log('\n--- against the real India Mela menu ---')
 const real = findClashes(melaFoodVendors)

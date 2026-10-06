@@ -2,7 +2,10 @@ import { useMemo, useState } from 'react'
 import { InlineField, InlineSelect, NumberField, RemoveButton, AddButton } from '../fields.jsx'
 import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
-import { findClashes, clashCounts } from '../../lib/menu.js'
+import { findClashes, clashCounts, stallClashLevel } from '../../lib/menu.js'
+import { CLASH_TONE } from '../../lib/clashTone.js'
+import { ViewToggle } from '../KanbanBoard.jsx'
+import MenuBoard from '../MenuBoard.jsx'
 
 /**
  * Food stalls and their menus, for an event that sells food.
@@ -18,7 +21,7 @@ import { findClashes, clashCounts } from '../../lib/menu.js'
 // uses in the workbook, not invented ones — free text in a column that only
 // ever holds five values is how you end up with "Reg Org", "reg org" and
 // "Registered Org" meaning the same thing and sorting differently.
-const TYPES = ['', 'Reg Org', 'Friends', 'Restaurant', 'BAPS', 'Temple', 'Non-Profit', 'Other']
+const TYPES = ['', 'Reg Org', 'Friends', 'Restaurant', 'Temple', 'Non-Profit', 'Other']
 const CONFIRMED = ['', 'Confirmed', 'Not this year']
 
 // The paperwork trail, in the order the committee walks it.
@@ -41,6 +44,7 @@ const BLANK_VENDOR = {
   email: '',
   type: '',
   confirmed: '',
+  specialRequests: '',
   attendedMeeting1: false,
   attendedCityMeeting: false,
   posMeeting: false,
@@ -59,7 +63,7 @@ const NO_VENDORS = Object.freeze([])
 
 const money = (n) => (n == null || n === '' ? '—' : `$${Number(n).toFixed(2)}`)
 
-export default function FoodStalls({ event, onVendorsChange }) {
+export default function FoodStalls({ event, onVendorsChange, view = 'list', onViewChange }) {
   const editable = useEditable()
   const vendors = event.foodVendors ?? NO_VENDORS
   const [open, setOpen] = useState(() => new Set())
@@ -120,7 +124,7 @@ export default function FoodStalls({ event, onVendorsChange }) {
     <div>
       <div className="mb-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex flex-wrap gap-1.5">
+          <div className={`flex flex-wrap gap-1.5 ${view === 'board' ? 'hidden' : ''}`}>
             {['All', 'Confirmed', 'Not this year', 'With a menu'].map((f) => (
               <button
                 key={f}
@@ -136,11 +140,16 @@ export default function FoodStalls({ event, onVendorsChange }) {
               </button>
             ))}
           </div>
-          <p className="text-xs text-ink-soft">
-            <span className="tabular font-semibold text-ink">{confirmedCount}</span> of{' '}
-            <span className="tabular">{vendors.length}</span> stalls confirmed ·{' '}
-            <span className="tabular font-semibold text-ink">{itemCount}</span> menu items
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-ink-soft">
+              <span className="tabular font-semibold text-ink">{confirmedCount}</span> of{' '}
+              <span className="tabular">{vendors.length}</span> stalls confirmed ·{' '}
+              <span className="tabular font-semibold text-ink">{itemCount}</span> menu items
+            </p>
+            {onViewChange && (
+              <ViewToggle view={view} onChange={onViewChange} boardLabel="Menu board" />
+            )}
+          </div>
         </div>
 
         {(counts.duplicate > 0 || counts.similar > 0) && (
@@ -157,18 +166,31 @@ export default function FoodStalls({ event, onVendorsChange }) {
                 {counts.similar} near-match{counts.similar === 1 ? '' : 'es'} worth checking
               </span>
             )}
-            {' — open a stall to see which.'}
+            {view === 'board' ? ' — the board shows which.' : ' — open a stall to see which.'}
           </p>
         )}
       </div>
 
+      {view === 'board' ? (
+        <MenuBoard vendors={vendors} clashes={clashes} />
+      ) : (
+        <>
       <ul className="flex flex-col gap-3">
         {shown.map((vendor) => {
           const isOpen = open.has(vendor.id)
           const menu = vendor.menu ?? []
           const flagged = menu.filter((m) => clashes.has(m.id)).length
+          // A stall whose dishes clash is tinted as a whole, so the ones
+          // needing a phone call are visible without opening every card.
+          const stallLevel = stallClashLevel(vendor, clashes)
+          const stallTone = stallLevel ? CLASH_TONE[stallLevel] : null
           return (
-            <li key={vendor.id} className="rounded-xl border border-border bg-surface">
+            <li
+              key={vendor.id}
+              className={`rounded-xl border ${
+                stallTone ? stallTone.card : 'border-border bg-surface'
+              }`}
+            >
               <div className="flex flex-col gap-3 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -231,7 +253,11 @@ export default function FoodStalls({ event, onVendorsChange }) {
                     <InlineSelect
                       value={vendor.type}
                       onChange={(v) => patchVendor(vendor.id, { type: v })}
-                      options={TYPES}
+                      options={
+                        vendor.type && !TYPES.includes(vendor.type)
+                          ? [...TYPES, vendor.type]
+                          : TYPES
+                      }
                       ariaLabel="Vendor type"
                       className="text-sm text-ink"
                     />
@@ -244,6 +270,17 @@ export default function FoodStalls({ event, onVendorsChange }) {
                       options={CONFIRMED}
                       ariaLabel="Confirmed"
                       className="text-sm text-ink"
+                    />
+                  </dd>
+                  {/* Starts its own row: a sentence does not belong in a
+                      column sized for "Mobile". */}
+                  <dt className="text-ink-soft sm:col-start-1">Requests</dt>
+                  <dd className="sm:col-span-3">
+                    <InlineField
+                      value={vendor.specialRequests}
+                      onChange={(v) => patchVendor(vendor.id, { specialRequests: v })}
+                      placeholder="Power, extra tables, placement — anything they have asked for"
+                      className="w-full text-sm text-ink"
                     />
                   </dd>
                 </dl>
@@ -291,7 +328,9 @@ export default function FoodStalls({ event, onVendorsChange }) {
                       {menu.length} item{menu.length === 1 ? '' : 's'}
                     </span>
                     {flagged > 0 && (
-                      <span className="ml-2 rounded bg-critical-soft px-1.5 py-0.5 text-[10px] font-bold text-critical">
+                      <span
+                        className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-bold ${stallTone.badge}`}
+                      >
                         {flagged} flagged
                       </span>
                     )}
@@ -315,11 +354,7 @@ export default function FoodStalls({ event, onVendorsChange }) {
                             <li
                               key={entry.id}
                               className={`flex flex-col gap-0.5 border-l-2 py-1.5 pl-2.5 sm:flex-row sm:items-center sm:gap-3 ${
-                                clash?.level === 'duplicate'
-                                  ? 'border-critical bg-critical-soft/40'
-                                  : clash
-                                    ? 'border-warning bg-warning-soft/40'
-                                    : 'border-transparent'
+                                clash ? CLASH_TONE[clash.level].row : 'border-transparent'
                               }`}
                             >
                               <div className="min-w-0 flex-1">
@@ -331,9 +366,7 @@ export default function FoodStalls({ event, onVendorsChange }) {
                                 />
                                 {clash && (
                                   <p
-                                    className={`pl-1.5 text-xs font-medium ${
-                                      clash.level === 'duplicate' ? 'text-critical' : 'text-warning'
-                                    }`}
+                                    className={`pl-1.5 text-xs font-medium ${CLASH_TONE[clash.level].text}`}
                                   >
                                     {clash.level === 'duplicate' ? 'Also at ' : 'Similar to '}
                                     {clash.with
@@ -387,6 +420,8 @@ export default function FoodStalls({ event, onVendorsChange }) {
         <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-ink-soft">
           No stalls match this filter.
         </div>
+      )}
+        </>
       )}
 
       {editable && (

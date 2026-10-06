@@ -72,6 +72,7 @@ export default function App() {
     checklist: 'list',
     runOfShow: 'timeline',
     actions: 'list',
+    foodMenu: 'list',
   })
   const [digestBusy, setDigestBusy] = useState(false)
 

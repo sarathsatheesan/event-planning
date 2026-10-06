@@ -113,3 +113,22 @@ export function clashCounts(clashes) {
   }
   return { duplicate, similar }
 }
+
+/**
+ * The worst clash anywhere in one stall's menu, or null.
+ *
+ * Red beats amber: a stall with one outright duplicate is not an amber
+ * problem, however many near-matches sit beside it. Used to tint the stall as
+ * a whole, so the ones that need a phone call are visible without opening
+ * every card.
+ */
+export function stallClashLevel(vendor, clashes) {
+  let level = null
+  for (const entry of vendor?.menu ?? []) {
+    const clash = clashes.get(entry.id)
+    if (!clash) continue
+    if (clash.level === 'duplicate') return 'duplicate'
+    level = 'similar'
+  }
+  return level
+}

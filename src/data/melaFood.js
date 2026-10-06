@@ -13,11 +13,21 @@
 // business vendors rather than food stalls, which is for the committee to
 // confirm. Mobile numbers were not in either tab — the column exists and is
 // empty, except where the prep sheet had one.
+//
+// Special requests are not a column on either tab either. The only one the
+// workbook records is on the "2026 Food Stall ICC Prep Work" sheet, where
+// four people wrote in asking to run a stall; one of them, The Melting Mango,
+// became a stall and keeps their note. The rest of the field is empty and
+// waiting for the committee — better than inventing content for it.
+//
+// Aroma was typed "BAPS" on the vendor tab. BAPS is no longer one of the
+// offered types, so the value is cleared rather than left pointing at an
+// option that does not exist; the committee picks the right one.
 export const melaFoodVendors = [
   {
     id: 1, stall: 'Temple', tradingName: 'Temple Stall',
     contact: 'Pavitra', mobile: '', email: '',
-    type: '', confirmed: 'Confirmed',
+    type: '', confirmed: 'Confirmed', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: true, posMeeting: false, menuProvided: true, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 1, item: 'Gobi Manchurian[5]', price: 7.0 },
@@ -39,14 +49,14 @@ export const melaFoodVendors = [
   {
     id: 2, stall: 'GCAU', tradingName: '',
     contact: 'Mayaben', mobile: '', email: '',
-    type: 'Reg Org', confirmed: '',
+    type: 'Reg Org', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: true, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 3, stall: 'UKK', tradingName: 'UKK Chaat Center',
     contact: 'Madhu', mobile: '', email: 'Utahkannadakuta@gmail.com',
-    type: 'Reg Org', confirmed: 'Confirmed',
+    type: 'Reg Org', confirmed: 'Confirmed', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: true, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 50, item: 'Butter Set Dosa', price: 6.99 },
@@ -64,14 +74,14 @@ export const melaFoodVendors = [
   {
     id: 4, stall: 'UTA', tradingName: '',
     contact: 'Ravi Yarlagadda', mobile: '', email: 'utahteluguassociation@gmail.com',
-    type: 'Reg Org', confirmed: '',
+    type: 'Reg Org', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: true, posMeeting: false, menuProvided: true, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 5, stall: 'Utah Indians', tradingName: '',
     contact: 'Nageswar Rao.G', mobile: '', email: 'nagesh_test@yahoo.com',
-    type: 'Friends', confirmed: 'Confirmed',
+    type: 'Friends', confirmed: 'Confirmed', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: true, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 36, item: 'Potato Samosa', price: 4.99 },
@@ -93,7 +103,7 @@ export const melaFoodVendors = [
   {
     id: 6, stall: 'NH44', tradingName: 'NH 44',
     contact: 'SENTHIL ALAGIRI', mobile: '', email: 'senthilkumar1922@gmail.com',
-    type: 'Friends', confirmed: 'Confirmed',
+    type: 'Friends', confirmed: 'Confirmed', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: true, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 27, item: 'Poori & Chana', price: 7.99 },
@@ -110,7 +120,7 @@ export const melaFoodVendors = [
   {
     id: 7, stall: 'UTS', tradingName: 'UTS - Chennai Express',
     contact: 'Ramiah', mobile: '', email: '',
-    type: 'Reg Org', confirmed: 'Confirmed',
+    type: 'Reg Org', confirmed: 'Confirmed', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: true, posMeeting: false, menuProvided: true, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 19, item: 'Parotta with Salna and Raita', price: 4.0 },
@@ -126,14 +136,14 @@ export const melaFoodVendors = [
   {
     id: 8, stall: 'Virasat', tradingName: '',
     contact: 'Eshani', mobile: '', email: '',
-    type: 'Reg Org', confirmed: '',
+    type: 'Reg Org', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: true, posMeeting: false, menuProvided: true, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 9, stall: 'GTA', tradingName: 'GTA - Telangana Ruchulu',
     contact: 'Vishal', mobile: '', email: '',
-    type: '', confirmed: 'Confirmed',
+    type: '', confirmed: 'Confirmed', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 60, item: 'Gudaalu', price: 3.99 },
@@ -154,98 +164,98 @@ export const melaFoodVendors = [
   {
     id: 10, stall: 'TAU', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'Reg Org', confirmed: '',
+    type: 'Reg Org', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 11, stall: 'ODIYA', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'Reg Org', confirmed: '',
+    type: 'Reg Org', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: true, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 12, stall: 'Utah Desis', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'Reg Org', confirmed: 'Not this year',
+    type: 'Reg Org', confirmed: 'Not this year', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 13, stall: 'Ajay', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: '', confirmed: '',
+    type: '', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 14, stall: 'Biriyani Avenue', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: '', confirmed: '',
+    type: '', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 15, stall: 'Pratik', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'Friends', confirmed: '',
+    type: 'Friends', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 16, stall: 'Aroma', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'BAPS', confirmed: '',
+    type: '', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 17, stall: 'Sreedhar', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'Restaurant', confirmed: '',
+    type: 'Restaurant', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 18, stall: 'Ulhaas', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'Friends', confirmed: '',
+    type: 'Friends', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 19, stall: 'UMM', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: 'Reg Org', confirmed: 'Not this year',
+    type: 'Reg Org', confirmed: 'Not this year', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 20, stall: 'NaKshatra Collection\'s', tradingName: '',
     contact: 'Nageswar Rao.G', mobile: '', email: 'nagesh_test@yahoo.com',
-    type: '', confirmed: '',
+    type: '', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 21, stall: 'Heartfulness Meditation SLC', tradingName: '',
     contact: 'Shekhar Gupta', mobile: '', email: 'shekhargupta2k14@gmail.com',
-    type: '', confirmed: '',
+    type: '', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 22, stall: 'Saritha Ignatius', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: '', confirmed: '',
+    type: '', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [],
   },
   {
     id: 23, stall: 'Radhe Krishna', tradingName: '',
     contact: '', mobile: '', email: '',
-    type: '', confirmed: '',
+    type: '', confirmed: '', specialRequests: '',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 15, item: 'Pani Puri', price: 5.99 },
@@ -257,7 +267,7 @@ export const melaFoodVendors = [
   {
     id: 24, stall: 'The Melting Mango', tradingName: '',
     contact: 'Sravya', mobile: '', email: 'contact.themeltingmango@gmail.com',
-    type: 'Restaurant', confirmed: '',
+    type: 'Restaurant', confirmed: '', specialRequests: 'Interested in setting up an ice cream stall — needs more details',
     attendedMeeting1: false, attendedCityMeeting: false, posMeeting: false, menuProvided: false, poster: false, depositPaid: false, stallPayment: false, finalSettlement: false,
     menu: [
       { id: 73, item: 'Mango 1 Scoop', price: 5.75 },

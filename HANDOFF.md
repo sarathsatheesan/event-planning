@@ -72,7 +72,17 @@ functions` if `functions/` changed) comes after all three.
   `event.needsFoodStalls`, like artists. India Mela's 24 stalls and 82 items are
   seeded in `src/data/melaFood.js`, consolidated from the committee's workbook
   (tabs *Food Vendors 2026* and *Food Menu2026*). Duplicate detection lives in
-  `src/lib/menu.js` and is tested against that real menu.
+  `src/lib/menu.js` and is tested against that real menu; the three tints it
+  drives are in `src/lib/clashTone.js`, shared so the stall list and the menu
+  board cannot disagree about what red means.
+  `specialRequests` was added 6 Oct 2026 and is absent on records written
+  before it — read it as `vendor.specialRequests ?? ''`. Neither workbook tab
+  had such a column; the only request it records came off the *2026 Food Stall
+  ICC Prep Work* sheet, and only The Melting Mango's survived into a stall.
+  `BAPS` was retired from the type list the same day and Aroma's value cleared,
+  but `InlineSelect` would silently blank any value the list no longer offers,
+  so `FoodStalls` appends an unknown stored type back onto the options rather
+  than letting the next save eat it. Keep that guard if the list changes again.
 - **Wrap-up follow-ups** — `event.retro.actions[]`, shape
   `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
@@ -220,5 +230,9 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   the floor volunteers it was designed for. Decision deferred deliberately.
 - **No offline support on the day-of view**, which is the one hour the app must
   not fail.
+- **The food-stall paperwork checkboxes render as disabled inputs** for a
+  signed-out visitor, where every other field renders as text. 192 dead
+  controls on India Mela's tab. Pre-dates the food work and is cosmetic, but it
+  is the one place the read-only rule is not kept.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.

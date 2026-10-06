@@ -206,6 +206,8 @@ export default function EventDetail({
           <FoodStalls
             event={event}
             onVendorsChange={(foodVendors, undoLabel) => onChange({ foodVendors }, undoLabel)}
+            view={tabViews?.foodMenu ?? 'list'}
+            onViewChange={(v) => onTabViewChange?.('foodMenu', v)}
           />
         )}
         {activeTab === 'artists' && (
