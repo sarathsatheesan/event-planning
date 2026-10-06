@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { taskStatusTone } from '../data/events.js'
+import { taskStatusTone, nextStatus } from '../data/events.js'
 import { useEditable } from '../lib/editing.js'
 import StatusPill from './StatusPill.jsx'
 import ViewSwitch from './ViewSwitch.jsx'
@@ -91,6 +91,11 @@ export default function MyWork({
   const editable = useEditable()
   const [person, setPerson] = useState(readPerson)
   const [showDone, setShowDone] = useState(false)
+  // Rows ticked off during this visit. Without this, marking something Done
+  // makes it vanish mid-sentence — the one moment you want to see it, because
+  // the point of ticking it off is watching the list shorten. They stay until
+  // the page is left, which is what "while I am on this page" means.
+  const [justDone, setJustDone] = useState(() => new Set())
   // Events that already happened still hold unticked milestones. They are
   // history, not work, and left in they drown the list — the first run of this
   // view showed 65 "overdue" items, nearly all from events long since over.
@@ -157,13 +162,16 @@ export default function MyWork({
       if (person === UNASSIGNED) return !t.assignee
       return t.assignee === person
     })
-    const open = showDone ? mine : mine.filter((t) => t.status !== 'Done')
+    const open = showDone ? mine : mine.filter((t) => t.status !== 'Done' || justDone.has(t.key))
     return open.sort((a, b) => {
       if (!a.due) return 1
       if (!b.due) return -1
       return a.due.localeCompare(b.due)
     })
-  }, [all, person, showDone])
+  }, [all, person, showDone, justDone])
+
+  // Completed in this visit and still on screen.
+  const doneHere = rows.filter((r) => r.status === 'Done').length
 
   const grouped = useMemo(() => {
     const byBucket = new Map()
@@ -175,8 +183,13 @@ export default function MyWork({
     return BUCKETS.filter((b) => byBucket.has(b.key)).map((b) => [b, byBucket.get(b.key)])
   }, [rows, stamp])
 
-  const overdue = rows.filter((r) => bucketFor(r.due, stamp) === 'overdue').length
-  const thisWeek = rows.filter((r) => ['today', 'week'].includes(bucketFor(r.due, stamp))).length
+  // Counts are of what is still owed. A row held on screen after being ticked
+  // off is no longer overdue, and leaving it in the total would mean the number
+  // does not move when you complete something — which is the one moment the
+  // number is being watched.
+  const owed = rows.filter((r) => r.status !== 'Done')
+  const overdue = owed.filter((r) => bucketFor(r.due, stamp) === 'overdue').length
+  const thisWeek = owed.filter((r) => ['today', 'week'].includes(bucketFor(r.due, stamp))).length
 
   function choosePerson(value) {
     setPerson(value)
@@ -271,6 +284,15 @@ export default function MyWork({
           {overdue > 0 && thisWeek > 0 && ' · '}
           {thisWeek > 0 && <span>{thisWeek} due within 7 days</span>}
           {overdue === 0 && thisWeek === 0 && rows.length > 0 && <span>Nothing due this week.</span>}
+          {!showDone && doneHere > 0 && (
+            <>
+              {(overdue > 0 || thisWeek > 0) && ' · '}
+              <span className="text-success">
+                {doneHere} completed here — {doneHere === 1 ? 'it clears' : 'they clear'} when you
+                leave this page
+              </span>
+            </>
+          )}
         </p>
       </div>
 
@@ -287,22 +309,27 @@ export default function MyWork({
               <div className="mb-2 flex items-baseline gap-2">
                 <h2 className={`font-display text-lg font-bold ${bucket.tone}`}>{bucket.label}</h2>
                 <span className="text-xs text-ink-soft">
-                  {items.length} milestone{items.length === 1 ? '' : 's'}
+                  {items.filter((t) => t.status !== 'Done').length} milestone
+                  {items.filter((t) => t.status !== 'Done').length === 1 ? '' : 's'}
                 </span>
               </div>
               <ul className="overflow-hidden rounded-xl border border-border">
                 {items.map((row, i) => (
                   <li
                     key={row.key}
-                    className={`flex flex-col gap-1 bg-surface px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 ${
-                      i !== items.length - 1 ? 'border-b border-border-soft' : ''
-                    }`}
+                    className={`flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 ${
+                      row.status === 'Done' ? 'bg-paper' : 'bg-surface'
+                    } ${i !== items.length - 1 ? 'border-b border-border-soft' : ''}`}
                   >
                     <span className="tabular w-28 shrink-0 font-mono text-xs text-ink-soft">
                       {shortDate(row.due)}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-ink">
+                      <span
+                        className={`block text-sm font-medium ${
+                          row.status === 'Done' ? 'text-ink-soft line-through' : 'text-ink'
+                        }`}
+                      >
                         {row.task || '(untitled)'}
                       </span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-ink-soft">
@@ -326,7 +353,12 @@ export default function MyWork({
                     {editable && onStatusChange ? (
                       <button
                         type="button"
-                        onClick={() => onStatusChange(row)}
+                        onClick={() => {
+                          if (nextStatus(row.status) === 'Done') {
+                            setJustDone((prev) => new Set(prev).add(row.key))
+                          }
+                          onStatusChange(row)
+                        }}
                         title="Advance this status"
                         className="focus-ring shrink-0 self-start rounded-full sm:self-auto"
                       >
