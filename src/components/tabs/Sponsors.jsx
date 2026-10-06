@@ -93,6 +93,31 @@ const NONE = Object.freeze([])
 
 const money = (n) => (n == null || n === '' ? '—' : `$${Number(n).toLocaleString('en-US')}`)
 
+const onDate = (iso) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
+/**
+ * What the payment columns add up to, in a sentence.
+ *
+ * "Received" on its own was read as a status someone had set rather than as a
+ * statement about money, so it says what was received and names whatever
+ * detail exists — the mode, the date, or both.
+ */
+function paymentState(s) {
+  if (!isPaid(s)) {
+    return s.response === 'Agreed' ? 'Pledged, no payment recorded yet' : 'No payment recorded'
+  }
+  // The mode keeps its stored casing. Lower-casing reads better for "check"
+  // and turns "ICC Wix" into "icc wix", and half the list is proper nouns.
+  const by = s.mode ? ` by ${s.mode}` : ''
+  const on = s.datePaid ? ` on ${onDate(s.datePaid)}` : ''
+  return `Payment received${by}${on}`
+}
+
 // Whole class strings, because Tailwind scans source text and would purge
 // anything assembled at runtime. Same tokens the status pills use elsewhere.
 const RESPONSE_TONE = {
@@ -400,11 +425,7 @@ export default function Sponsors({ event, onSponsorsChange }) {
                         isPaid(s) ? 'text-success' : 'text-ink-soft'
                       }`}
                     >
-                      {isPaid(s)
-                        ? `Received${s.mode ? ` by ${s.mode.toLowerCase()}` : ''}`
-                        : s.response === 'Agreed'
-                          ? 'Pledged, not yet received'
-                          : 'No payment recorded'}
+                      {paymentState(s)}
                     </span>
                     {ARTEFACTS.map((a) => (
                       <label
