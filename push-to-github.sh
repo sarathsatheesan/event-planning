@@ -89,11 +89,11 @@ cat <<'DONE'
 
 Pushed.
 
-Last step — turn Pages on (one time only):
-  1. https://github.com/sarathsatheesan/event-planning/settings/pages
-  2. Build and deployment -> Source -> "GitHub Actions"
+Hosting redeploys itself from this push via GitHub Actions (~1 min):
+  https://github.com/sarathsatheesan/event-planning/actions
+Live at:
+  https://icceventops.web.app
 
-The deploy workflow then runs on this push and every push after it.
-Watch it: https://github.com/sarathsatheesan/event-planning/actions
-Live at:  https://sarathsatheesan.github.io/event-planning/
+Cloud Functions are NOT in CI. If this push changed anything under functions/:
+  firebase deploy --only functions --project event-planning-de705
 DONE
