@@ -20,6 +20,21 @@ const BLANK_RETRO = {
 const ACTION_STATUSES = ['Not Started', 'In Progress', 'Blocked', 'Done']
 const ACTION_LANES = ACTION_STATUSES.map((key) => ({ key, label: key }))
 
+function blankAction(existing) {
+  return {
+    id: nextId(existing),
+    action: '',
+    assignee: '',
+    assigneeEmail: null,
+    // Two weeks out, not blank. Follow-ups are future work by nature — pay the
+    // balance, ship the cheque, return the hire gear — and an undated one
+    // reaches nobody: the weekly reminder skips anything without a date, so
+    // "no date" is the quietest way to lose a commitment the debrief just made.
+    due: inTwoWeeks(),
+    status: 'Not Started',
+  }
+}
+
 function inTwoWeeks() {
   const d = new Date()
   d.setDate(d.getDate() + 14)
@@ -79,9 +94,21 @@ export default function PostEventWrapUp({ event, onRetroChange, view = 'list', o
             </>
           )}
         </p>
-        <div className="mt-2 w-64">
+        {/* Two ways in, because they are wanted at different moments. The
+            reconciliation and the debrief notes are a sit-down job, days later.
+            A follow-up — pay the balance, return the hire gear — is remembered
+            while loading the van, and hiding it behind a button labelled
+            "start the wrap-up" is how it gets lost. Both open the same page. */}
+        <div className="mt-2 flex w-full max-w-sm flex-col gap-2">
           <AddButton onClick={() => onRetroChange({ ...BLANK_RETRO })}>Start the wrap-up</AddButton>
+          <AddButton onClick={() => onRetroChange({ ...BLANK_RETRO, actions: [blankAction([])] })}>
+            Add a follow-up action
+          </AddButton>
         </div>
+        <p className="max-w-sm text-xs text-ink-soft">
+          A follow-up carries an owner and a due date, so it reaches My Work and the weekly
+          reminder instead of living in somebody&apos;s memory.
+        </p>
       </div>
     )
   }
@@ -95,26 +122,9 @@ export default function PostEventWrapUp({ event, onRetroChange, view = 'list', o
   }
 
   function addAction() {
-    onRetroChange({
-      ...retro,
-      actions: [
-        ...actions,
-        {
-          id: nextId(actions),
-          action: '',
-          assignee: '',
-          assigneeEmail: null,
-          // Two weeks out, not blank. Follow-ups are future work by nature —
-          // pay the balance, ship the cheque, return the hire gear — and an
-          // undated one reaches nobody: the weekly reminder skips anything
-          // without a date, so "no date" is the quietest way to lose a
-          // commitment the debrief just made. Editable like any other field.
-          due: inTwoWeeks(),
-          status: 'Not Started',
-        },
-      ],
-    })
+    onRetroChange({ ...retro, actions: [...actions, blankAction(actions)] })
   }
+
   const budget = finalReconciliation?.budget ?? null
   const spent = finalReconciliation?.spent ?? null
   // Variance is derived, never stored — a stored copy drifts the moment either
