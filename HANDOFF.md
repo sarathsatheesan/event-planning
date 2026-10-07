@@ -69,7 +69,14 @@ functions` if `functions/` changed) comes after all three.
   Managed in-app via the **Committee** button. No longer in source.
 - **Artist files** — Cloud Storage under `artistPosters/` and `artistBios/`.
 - **Food stalls** — `event.foodVendors[]`, each with a nested `menu[]`. Gated by
-  `event.needsFoodStalls`, like artists. India Mela's 24 stalls and 82 items are
+  `event.needsFoodStalls`, like artists. That same flag now also picks the
+  **shape** of the tab: India Mela has it and gets the full thing, called
+  *Food Stalls & Menu*; every other event gets a tab called *Menu* showing
+  stall, trading name, contact, mobile, email and the menu, with the type,
+  confirmation status, special requests, the eight paperwork checkboxes and
+  the status filters not rendered (`simple` prop on `FoodStalls`). The fields
+  are hidden, not dropped — anything already entered survives, so turning
+  `needsFoodStalls` on for an event restores the full view with its data. India Mela's 24 stalls and 82 items are
   seeded in `src/data/melaFood.js`, consolidated from the committee's workbook
   (tabs *Food Vendors 2026* and *Food Menu2026*). Duplicate detection lives in
   `src/lib/menu.js` and is tested against that real menu; the three tints it
