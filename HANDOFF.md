@@ -200,10 +200,9 @@ The shared overview goes **to** the ICC inbox with the committee **bcc'd** —
 not thirty addresses in the To line. A personal reminder goes straight **to**
 that one person with `replyTo` on the ICC inbox and nobody copied.
 
-`npm test` at the repo root covers the calendar filters, the org backfill and
-the menu-duplicate matcher; `npm test` in `functions/` covers the digests and
-runs against the **immutable seed**, not Firestore — neither can see owners
-assigned in the app, which is what **Preview Monday** is for.
+Both test suites run against the **immutable seed**, not Firestore, so neither
+can see owners assigned in the app — which is what **Preview Monday** is for.
+See *How this codebase gets tested* for what each one covers.
 
 A partially failed weekly run is **not** retried: the schedule throws only when
 every send failed. Retrying a partial run would re-send to everyone who already
