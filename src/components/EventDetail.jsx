@@ -37,7 +37,11 @@ function tabsFor(event, editable) {
   // event either does or does not do, and the committee books both months out.
   const lead = []
   if (event.needsArtists || editable) lead.push({ key: 'artists', label: 'Artist Selection' })
-  if (event.needsFoodStalls || editable) lead.push({ key: 'food', label: 'Food Stalls & Menu' })
+  // India Mela runs a food operation and gets the full tab; everywhere else
+  // this is just a menu, and says so.
+  if (event.needsFoodStalls || editable) {
+    lead.push({ key: 'food', label: event.needsFoodStalls ? 'Food Stalls & Menu' : 'Menu' })
+  }
   // Sponsors is on every event, with no switch: an event the ICC would not
   // seek sponsorship for is hard to name, and an empty tab says "nobody has
   // asked anyone yet", which is itself worth seeing.
@@ -213,6 +217,7 @@ export default function EventDetail({
           <FoodStalls
             event={event}
             onVendorsChange={(foodVendors, undoLabel) => onChange({ foodVendors }, undoLabel)}
+            simple={!event.needsFoodStalls}
             view={tabViews?.foodMenu ?? 'list'}
             onViewChange={(v) => onTabViewChange?.('foodMenu', v)}
           />

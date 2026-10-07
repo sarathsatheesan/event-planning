@@ -64,7 +64,27 @@ const NO_VENDORS = Object.freeze([])
 
 const money = (n) => (n == null || n === '' ? '—' : `$${Number(n).toFixed(2)}`)
 
-export default function FoodStalls({ event, onVendorsChange, view = 'list', onViewChange }) {
+/**
+ * `simple` strips the tab back to a menu and nothing else.
+ *
+ * India Mela runs a food operation: two dozen stalls, a city meeting, a
+ * deposit and a settlement, all of which have to be tracked. No other ICC
+ * event does — a Navratri concert has a caterer and a price list. So
+ * everywhere but the Mela this is a list of who is cooking, how to reach them,
+ * and what they are selling; the type, the confirmation status, the special
+ * requests and the eight-step paperwork trail are not shown, because there is
+ * no paperwork to trail.
+ *
+ * Shown, not deleted: the fields stay on the record, so an event switched to
+ * the full version later still has whatever was entered.
+ */
+export default function FoodStalls({
+  event,
+  onVendorsChange,
+  view = 'list',
+  onViewChange,
+  simple = false,
+}) {
   const editable = useEditable()
   const vendors = event.foodVendors ?? NO_VENDORS
   const [open, setOpen] = useState(() => new Set())
@@ -132,7 +152,9 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
     <div>
       <div className="mb-4 flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <div className={`flex flex-wrap gap-1.5 ${view === 'board' ? 'hidden' : ''}`}>
+          <div
+            className={`flex flex-wrap gap-1.5 ${view === 'board' || simple ? 'hidden' : ''}`}
+          >
             {['All', 'Confirmed', 'Not this year', 'With a menu'].map((f) => (
               <button
                 key={f}
@@ -150,8 +172,18 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
           </div>
           <div className="flex items-center gap-3">
             <p className="text-xs text-ink-soft">
-              <span className="tabular font-semibold text-ink">{confirmedCount}</span> of{' '}
-              <span className="tabular">{vendors.length}</span> stalls confirmed ·{' '}
+              {simple ? (
+                <>
+                  <span className="tabular font-semibold text-ink">{vendors.length}</span>{' '}
+                  {vendors.length === 1 ? 'stall' : 'stalls'}
+                </>
+              ) : (
+                <>
+                  <span className="tabular font-semibold text-ink">{confirmedCount}</span> of{' '}
+                  <span className="tabular">{vendors.length}</span> stalls confirmed
+                </>
+              )}{' '}
+              ·{' '}
               <span className="tabular font-semibold text-ink">{itemCount}</span> menu items
             </p>
             {onViewChange && (
@@ -280,6 +312,8 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
                       className="w-full text-sm text-ink"
                     />
                   </dd>
+                  {!simple && (
+                    <>
                   <dt className="text-ink-soft">Type</dt>
                   <dd>
                     <InlineSelect
@@ -315,10 +349,13 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
                       className="w-full text-sm text-ink"
                     />
                   </dd>
+                    </>
+                  )}
                 </dl>
 
                 {/* The paperwork trail. Checkboxes rather than a Y/blank column:
                     the sheet's "Y" was a tick that someone had to type. */}
+                {!simple && (
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                   {STEPS.map((step) => (
                     <label
@@ -338,6 +375,7 @@ export default function FoodStalls({ event, onVendorsChange, view = 'list', onVi
                     </label>
                   ))}
                 </div>
+                )}
               </div>
 
               <div className="border-t border-border-soft px-4 py-2.5">
