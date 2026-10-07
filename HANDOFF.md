@@ -1,6 +1,6 @@
 # EventOps — handoff
 
-India Cultural Center of Utah · last updated 6 October 2026 · `main`
+India Cultural Center of Utah · last updated 7 October 2026 · `main`
 
 <!-- No commit hash here on purpose: this file is edited in the same commit it
      would name, so any hash written above is wrong the moment it is committed.
@@ -52,6 +52,20 @@ functions` if `functions/` changed) comes after all three.
 | Hosting deploys | **Automatic.** Push to `main` → GitHub Actions → Firebase Hosting (~1 min) |
 | Function deploys | **Manual.** `firebase deploy --only functions`. Not in CI. |
 | Rules deploys | **Manual.** `firebase deploy --only firestore:rules,storage` |
+
+## Tab names
+
+One list in `EventDetail.jsx` names the tabs; nothing per-event stores a name,
+so a change there reaches every event including newly created ones with no
+migration. Two rules the committee asked for and that are easy to undo by
+accident:
+
+- **No phase numbers.** The four stages are *Pre-Event Planning*, *Day-Of
+  Command Center*, *Vendor & Resource Directory* and *Post-Event Wrap-Up* — the
+  "Phase 1–4" prefixes came off on 7 Oct 2026, from the PDF and the export
+  picker as well as the tab strip, so the printout says what the app says.
+- **The food tab has two names.** *Food Stalls & Menu* on India Mela, plain
+  *Menu* everywhere else, both driven by `event.needsFoodStalls`.
 
 ## Where the data lives
 
@@ -286,14 +300,29 @@ addresses are in the logs — search `Reminder send failed`.
 
 No test framework. Two approaches, both worth continuing:
 
-- **Pure logic in Node.** `functions/digest.test.mjs` runs the digest against
-  the real calendar at several dates; `functions/mailer.test.mjs` checks message
-  shape and that the password cannot leak into anything loggable. `npm test` in
-  `functions/`.
+- **Pure logic in Node.** Five suites, no framework, ~124 assertions.
+  At the repo root, `npm test` runs `src/lib/filters.test.mjs` (calendar
+  filters, the org backfill, the sponsor and business-vendor seeds),
+  `src/lib/menu.test.mjs` (the duplicate-dish matcher, against the committee's
+  real 82-item menu) and `src/lib/menuImport.test.mjs` (the menu parser against
+  realistically messy input). In `functions/`, `npm test` runs
+  `digest.test.mjs` against the real calendar at several dates and
+  `mailer.test.mjs` for message shape and that the password cannot leak into
+  anything loggable. **Both** are worth running; the root one does not include
+  the functions suites.
 - **UI driven headless.** Build with the Firebase `apiKey` blanked so the app
-  falls into local mode and the editable path is reachable without network, then
-  drive it with Playwright. This is how the read-only gating, the person picker's
-  tolerance of legacy names, and the committee dialog's guards were verified.
+  falls into local mode and the editable path is reachable without network,
+  serve it with `vite preview`, then drive it with Playwright
+  (`executablePath: '/opt/pw-browsers/chromium'`). Rebuild with the real key to
+  check the signed-out read-only view in the same way. This is how the
+  read-only gating, the person picker's tolerance of legacy names, the
+  committee dialog's guards, the menu importer's four file formats and every
+  tab's mobile layout were verified.
+- **Look at the output.** The PDF export is checked by downloading it from the
+  driven browser and rendering page one with `pdftoppm`, not by asserting on
+  the generator. Horizontal overflow is checked by actually scrolling the page
+  sideways and reading `window.scrollX` — `document.body.scrollWidth` reported
+  390 while the page visibly slid.
 
 Rendering the digest email to an image caught a missing charset declaration that
 would have shipped `Â·` to every recipient. Look at output, do not just assert on it.
@@ -317,15 +346,19 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   the floor volunteers it was designed for. Decision deferred deliberately.
 - **No offline support on the day-of view**, which is the one hour the app must
   not fail.
-- **Sponsors are not in the PDF export.** The export's section picker has no
-  entry for them, so a committee meeting handout leaves the sponsor pipeline
-  out. Nobody has asked for it yet.
+- **Three tabs are missing from the PDF export.** The picker offers artists and
+  the four stages only, so a committee handout leaves out the sponsor pipeline,
+  the food stalls and their menus, and the business booths — which between them
+  are most of what a fundraising or Mela meeting is about. Adding a section is
+  `EXPORT_SECTIONS` in `src/lib/exportPdf.js` plus a `startSection` block.
+  Nobody has asked yet.
 - **A scanned PDF menu cannot be read** and the dialog says so rather than
   importing nothing silently. OCR would fix it and is not worth the weight;
   the answer is to ask the vendor for a spreadsheet.
 - **The food-stall paperwork checkboxes render as disabled inputs** for a
   signed-out visitor, where every other field renders as text. 192 dead
-  controls on India Mela's tab. Pre-dates the food work and is cosmetic, but it
-  is the one place the read-only rule is not kept.
+  controls — on **India Mela only** now, since the simple *Menu* variant does
+  not render them at all. Cosmetic, but it is the one place the read-only rule
+  is not kept.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.
