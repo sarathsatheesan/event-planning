@@ -17,10 +17,12 @@ import Sponsors from './tabs/Sponsors.jsx'
 import BusinessVendors from './tabs/BusinessVendors.jsx'
 
 const TABS = [
-  { key: 'preevent', label: 'Pre-Event Planning', phase: 'Phase 1' },
-  { key: 'dayof', label: 'Day-Of Command Center', phase: 'Phase 2' },
-  { key: 'vendors', label: 'Vendor & Resource Directory', phase: 'Phase 3' },
-  { key: 'wrapup', label: 'Post-Event Wrap-Up', phase: 'Phase 4' },
+  // No phase numbers. The four names already say what they are, and the
+  // numbering only mattered when the tab strip was the whole navigation.
+  { key: 'preevent', label: 'Pre-Event Planning' },
+  { key: 'dayof', label: 'Day-Of Command Center' },
+  { key: 'vendors', label: 'Vendor & Resource Directory' },
+  { key: 'wrapup', label: 'Post-Event Wrap-Up' },
 ]
 
 /**
@@ -190,11 +192,6 @@ export default function EventDetail({
               activeTab === t.key ? 'text-accent' : 'text-ink-soft hover:text-ink'
             }`}
           >
-            {t.phase && (
-              <span className="mr-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-soft/70">
-                {t.phase}
-              </span>
-            )}
             {t.label}
             {activeTab === t.key && (
               <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-accent" />

@@ -53,7 +53,7 @@ export default function ExportDialog({ event, onClose }) {
     setBusy(true)
     setError(null)
     try {
-      // Keep the app's phase order regardless of the order boxes were ticked.
+      // Keep the app's section order regardless of the order boxes were ticked.
       const ordered = sections.filter((s) => selected.includes(s.key)).map((s) => s.key)
       await exportEventPdf(event, ordered)
       onClose()
@@ -94,9 +94,7 @@ export default function ExportDialog({ event, onClose }) {
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-semibold text-ink">{s.label}</span>
-                    <span className="block text-xs text-ink-soft">
-                      {[s.phase, detail].filter(Boolean).join(' · ')}
-                    </span>
+                    <span className="block text-xs text-ink-soft">{detail}</span>
                   </span>
                 </label>
               </li>

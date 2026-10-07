@@ -5,11 +5,11 @@ import { rosterSummary } from './artists.js'
 // The four phases, in the order they appear in the app. `key` matches the
 // checkbox ids in the export dialog.
 export const EXPORT_SECTIONS = [
-  { key: 'artists', label: 'Artist Selection', phase: null },
-  { key: 'preevent', label: 'Pre-Event Planning', phase: 'Phase 1' },
-  { key: 'dayof', label: 'Day-Of Command Center', phase: 'Phase 2' },
-  { key: 'vendors', label: 'Vendor & Resource Directory', phase: 'Phase 3' },
-  { key: 'wrapup', label: 'Post-Event Wrap-Up', phase: 'Phase 4' },
+  { key: 'artists', label: 'Artist Selection' },
+  { key: 'preevent', label: 'Pre-Event Planning' },
+  { key: 'dayof', label: 'Day-Of Command Center' },
+  { key: 'vendors', label: 'Vendor & Resource Directory' },
+  { key: 'wrapup', label: 'Post-Event Wrap-Up' },
 ]
 
 const INK = [18, 21, 28]
@@ -37,17 +37,13 @@ function money(n) {
 }
 
 /** Section banner. Every section starts on its own page. */
-function sectionHeading(doc, phase, label, y) {
-  // Artist selection has no phase number — it runs alongside the four phases.
-  if (phase) {
-    doc.setFont('helvetica', 'bold').setFontSize(7).setTextColor(...SOFT)
-    doc.text(phase.toUpperCase(), 40, y)
-  }
+function sectionHeading(doc, label, y) {
+  // No phase number above the name: the printout says what the app says.
   doc.setFont('helvetica', 'bold').setFontSize(15).setTextColor(...INK)
-  doc.text(label, 40, y + 16)
+  doc.text(label, 40, y + 10)
   doc.setDrawColor(...RULE).setLineWidth(0.75)
-  doc.line(40, y + 24, doc.internal.pageSize.getWidth() - 40, y + 24)
-  return y + 42
+  doc.line(40, y + 18, doc.internal.pageSize.getWidth() - 40, y + 18)
+  return y + 36
 }
 
 function table(doc, autoTable, head, body, startY, columnStyles) {
@@ -134,18 +130,18 @@ export async function exportEventPdf(event, selectedKeys) {
 
   let y = 158
 
-  const startSection = (phase, label) => {
+  const startSection = (label) => {
     if (!first) {
       doc.addPage()
       y = 56
     }
     first = false
-    y = sectionHeading(doc, phase, label, y)
+    y = sectionHeading(doc, label, y)
   }
 
   // ---- Artist selection ----
   if (selectedKeys.includes('artists')) {
-    startSection(null, 'Artist Selection')
+    startSection('Artist Selection')
     const artists = event.artists ?? []
     const choice = event.artistChoice ?? null
     const chosen = choice ? artists.find((a) => a.id === choice.artistId) : null
@@ -200,9 +196,9 @@ export async function exportEventPdf(event, selectedKeys) {
     }
   }
 
-  // ---- Phase 1 ----
+  // ---- Pre-event planning ----
   if (selectedKeys.includes('preevent')) {
-    startSection('Phase 1', 'Pre-Event Planning')
+    startSection('Pre-Event Planning')
     const rows = event.checklist.map((t) => [
       t.anchor,
       t.task || '(untitled)',
@@ -218,7 +214,7 @@ export async function exportEventPdf(event, selectedKeys) {
       table(
         doc,
         autoTable,
-        ['Phase', 'Milestone', 'Category', 'Owner', 'Due', 'Status'],
+        ['When', 'Milestone', 'Category', 'Owner', 'Due', 'Status'],
         rows,
         y,
         { 0: { cellWidth: 42 }, 1: { cellWidth: 190 }, 4: { cellWidth: 58 }, 5: { cellWidth: 58 } }
@@ -226,9 +222,9 @@ export async function exportEventPdf(event, selectedKeys) {
     }
   }
 
-  // ---- Phase 2 ----
+  // ---- Day-of command center ----
   if (selectedKeys.includes('dayof')) {
-    startSection('Phase 2', 'Day-Of Command Center')
+    startSection('Day-Of Command Center')
     const rows = event.runOfShow.map((it) => [
       it.time,
       offsetFromStart(it.time, event.startTime) ?? '—',
@@ -251,9 +247,9 @@ export async function exportEventPdf(event, selectedKeys) {
     }
   }
 
-  // ---- Phase 3 ----
+  // ---- Vendor & resource directory ----
   if (selectedKeys.includes('vendors')) {
-    startSection('Phase 3', 'Vendor & Resource Directory')
+    startSection('Vendor & Resource Directory')
     const vendors = event.vendors ?? []
     const stack = (...lines) => lines.filter(Boolean).join('\n') || '—'
     const rows = vendors.map((v) => [
@@ -284,9 +280,9 @@ export async function exportEventPdf(event, selectedKeys) {
     }
   }
 
-  // ---- Phase 4 ----
+  // ---- Post-event wrap-up ----
   if (selectedKeys.includes('wrapup')) {
-    startSection('Phase 4', 'Post-Event Wrap-Up')
+    startSection('Post-Event Wrap-Up')
     const retro = event.retro
     if (!retro) {
       doc.setFont('helvetica', 'italic').setFontSize(9).setTextColor(...SOFT)
