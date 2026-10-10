@@ -25,6 +25,16 @@ const HORIZON_DAYS = 14
 // A section listing thirty-one items is a wall, and a wall gets archived. Show
 // enough to act on and point at the app for the rest.
 const MAX_ROWS_PER_SECTION = 12
+// The overview is read by somebody whose job is to know everything, so it is
+// not trimmed to twelve rows the way a personal list is — "and 32 more" is
+// exactly the information they opened the mail for. The ceiling is a guard
+// against a pathological backlog rather than an editorial choice: Gmail clips
+// a message over roughly 102KB behind "View entire message", and a few hundred
+// rows is where that starts to matter.
+const MAX_ROWS_OVERVIEW = 250
+// Below this many rows the list is its own summary, and a table above three
+// items reads as ceremony.
+const SUMMARY_FROM_ROWS = 10
 
 /** Local date parts, not toISOString — an evening in Utah is not tomorrow. */
 export function dayStamp(date) {
@@ -122,6 +132,35 @@ function capped(groups, limit, { minPerGroup = 0 } = {}) {
     hidden += items.length - takes[i]
   })
   return { shown, hidden }
+}
+
+/**
+ * Who owes what, before the detail.
+ *
+ * A committee overview with fifty-odd rows answers "what is outstanding" and
+ * buries "who is drowning". This answers the second question in one glance and
+ * costs four lines, and the detail still follows underneath in full.
+ *
+ * Overview only. On a personal list every row has the same owner, so the
+ * table would be one line saying what the heading already said.
+ */
+function summarise(overdue, soon) {
+  const rows = new Map()
+  const bump = (owner, key) => {
+    const row = rows.get(owner) ?? { owner, overdue: 0, soon: 0 }
+    row[key] += 1
+    rows.set(owner, row)
+  }
+  for (const r of overdue) bump(r.owner, 'overdue')
+  for (const r of soon) bump(r.owner, 'soon')
+  // Same order as the sections below, so the eye can follow one to the other:
+  // most owed first, Unassigned last because it is nobody's inbox problem
+  // until somebody claims it.
+  return [...rows.values()].sort((a, b) => {
+    if (a.owner === 'Unassigned') return 1
+    if (b.owner === 'Unassigned') return -1
+    return b.overdue + b.soon - (a.overdue + a.soon) || a.owner.localeCompare(b.owner)
+  })
 }
 
 function group(rows, keyOf) {
@@ -287,12 +326,31 @@ export function buildDigest({
   const grouped = forPerson ? groupByEvent : groupByOwner
   const capping = { minPerGroup: forPerson ? 2 : 0 }
   const trailing = forPerson ? () => '' : (row) => row.event
+  const sectionLimit = forPerson ? MAX_ROWS_PER_SECTION : MAX_ROWS_OVERVIEW
+  // A summary of one owner is the heading again in a box — which happens more
+  // often than it sounds, because unowned work all lands under Unassigned.
+  const summary =
+    forPerson || overdue.length + soon.length < SUMMARY_FROM_ROWS
+      ? []
+      : summarise(overdue, soon).filter((_, __, all) => all.length > 1)
 
   // ---- plain text, for clients that prefer it and for the test to read ----
   const lines = []
   if (forPerson) {
     const hi = firstName(forPerson)
     lines.push(hi ? `${hi} — here is your list.` : 'Here is your list.', '')
+  }
+  if (summary.length) {
+    lines.push('WHO OWES WHAT')
+    const width = Math.max(...summary.map((r) => r.owner.length))
+    for (const r of summary) {
+      const parts = [
+        r.overdue > 0 ? `${r.overdue} overdue` : null,
+        r.soon > 0 ? `${r.soon} due this week` : null,
+      ].filter(Boolean)
+      lines.push(`  ${r.owner.padEnd(width)}  ${parts.join(', ')}`)
+    }
+    lines.push('')
   }
   if (upcoming.length) {
     lines.push('COMING UP')
@@ -307,7 +365,7 @@ export function buildDigest({
   ]) {
     if (!rows.length) continue
     lines.push(`${label} (${rows.length})`)
-    const { shown, hidden } = capped(grouped(rows), MAX_ROWS_PER_SECTION, capping)
+    const { shown, hidden } = capped(grouped(rows), sectionLimit, capping)
     for (const [key, items, total] of shown) {
       lines.push(`  ${key} — ${total}`)
       for (const it of items) {
@@ -324,7 +382,7 @@ export function buildDigest({
   // ---- html ----
   const section = (title, rows, colour) => {
     if (!rows.length) return ''
-    const { shown, hidden } = capped(grouped(rows), MAX_ROWS_PER_SECTION, capping)
+    const { shown, hidden } = capped(grouped(rows), sectionLimit, capping)
     const groups = shown
       .map(
         ([key, items, total]) => `
@@ -352,6 +410,33 @@ export function buildDigest({
         <table role="presentation" cellpadding="0" cellspacing="0" width="100%">${groups}${more}</table>
       </td></tr>`
   }
+
+  // A two-column table rather than a list: the counts line up, so the row that
+  // needs attention is found by scanning down one column instead of reading
+  // every line. Inline styles and a presentation table because that is what
+  // mail clients render reliably — the same constraint as the rest of this file.
+  const summaryHtml = summary.length
+    ? `<tr><td style="padding:14px 0 0">
+         <div style="font:700 15px system-ui,sans-serif;color:#12151c">Who owes what</div>
+         <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:6px;border:1px solid #e8eaf0;border-radius:8px">
+           ${summary
+             .map(
+               (r, i) => `
+           <tr style="background:${i % 2 ? '#ffffff' : '#f7f8fb'}">
+             <td style="padding:6px 10px;font:400 13px system-ui,sans-serif;color:#12151c">${escape(r.owner)}</td>
+             <td style="padding:6px 10px;font:600 13px system-ui,sans-serif;color:${r.overdue ? '#d1372f' : '#6e7684'};text-align:right;white-space:nowrap">${r.overdue || '—'}</td>
+             <td style="padding:6px 10px;font:400 13px system-ui,sans-serif;color:#6e7684;text-align:right;white-space:nowrap">${r.soon || '—'}</td>
+           </tr>`
+             )
+             .join('')}
+           <tr>
+             <td style="padding:4px 10px 8px;font:400 11px system-ui,sans-serif;color:#6e7684">Everything below, in full</td>
+             <td style="padding:4px 10px 8px;font:400 11px system-ui,sans-serif;color:#6e7684;text-align:right">overdue</td>
+             <td style="padding:4px 10px 8px;font:400 11px system-ui,sans-serif;color:#6e7684;text-align:right">this week</td>
+           </tr>
+         </table>
+       </td></tr>`
+    : ''
 
   const upcomingHtml = upcoming.length
     ? `<tr><td style="padding:4px 0 0">
@@ -397,6 +482,7 @@ export function buildDigest({
       <div style="font:700 20px system-ui,sans-serif;color:#12151c;padding-top:2px">${heading}</div>
       ${greeting}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+        ${summaryHtml}
         ${upcomingHtml}
         ${section('Overdue', overdue, '#d1372f')}
         ${section('Due within 7 days', soon, '#12151c')}

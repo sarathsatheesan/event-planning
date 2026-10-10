@@ -99,17 +99,33 @@ async function requireAdmin(request, action) {
  * byte-for-byte the one they would have received anyway — no second code path
  * to drift.
  */
-async function deliverDigest({ includeCompleted = false, trigger }) {
+async function deliverDigest({ includeCompleted = false, trigger, only = null }) {
   const roster = await readRoster()
-  const recipients = (roster?.emails ?? [])
+  const onRoster = (roster?.emails ?? [])
     .map((e) => String(e).trim().toLowerCase())
     .filter(Boolean)
 
-  if (recipients.length === 0) {
+  if (onRoster.length === 0) {
     // Guessing a recipient list from source would mean emailing people the
     // committee may already have removed.
     logger.warn('No committee roster — nothing sent.', { trigger })
     return { sent: false, reason: 'no-roster', recipients: 0 }
+  }
+
+  // The caller may ask for a subset, never for an address that is not on the
+  // roster. This is an admin-only button, but it is an admin-only button on a
+  // public endpoint: taking the browser's list at face value would turn it
+  // into a way to send mail from the committee's address to anybody at all.
+  // So the roster is the source and the request is only a filter over it.
+  const asked = Array.isArray(only)
+    ? [...new Set(only.map((e) => String(e ?? '').trim().toLowerCase()).filter(Boolean))]
+    : null
+  const recipients = asked ? onRoster.filter((e) => asked.includes(e)) : onRoster
+  if (recipients.length === 0) {
+    throw new HttpsError(
+      'invalid-argument',
+      'Choose at least one committee member to send this to.'
+    )
   }
 
   const digest = buildDigest({ events: await readEvents(), today: new Date(), includeCompleted })
@@ -279,6 +295,7 @@ export const sendDigestNow = onCall(
     const result = await deliverDigest({
       includeCompleted: request.data?.scope === 'all',
       trigger: `manual:${email}`,
+      only: Array.isArray(request.data?.to) ? request.data.to : null,
     })
 
     if (result.sent) {

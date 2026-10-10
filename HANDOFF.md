@@ -297,6 +297,40 @@ accident:
 - **Mail sender config** — `functions/.env`, committed on purpose. It holds the
   from-address, which is printed on every email anyway.
 
+## Who gets which email
+
+Two different emails, three ways out, and the difference is the thing people
+get wrong.
+
+- **Monday 08:00 America/Denver** (`weeklyDigest`) — each member gets **their
+  own** list, addressed to them alone, grouped by event, capped at 12 rows a
+  section. Nothing due means **no email**: silence has to mean something.
+  Admins **also** get the committee overview.
+- **Email the committee** (`sendDigestNow`) — the **overview**, to the people
+  an admin ticks in the dialog. Nobody is ticked to begin with and Save stays
+  disabled until somebody is, so mailing all sixteen is a choice rather than
+  the default. The browser's list is a **filter over the roster**, never a list
+  of addresses: `deliverDigest` intersects it with `config/committee`, because
+  this is an admin-only button on a public endpoint.
+- **Preview Monday** (`previewMondayReminders`) — what the Monday run would do.
+  Binds no secret, so it cannot send. It reports the **plan** — who gets mail,
+  the subject lines, who gets silence, what reaches nobody — not the rendered
+  email. There is no preview for the manual send.
+
+**The overview is not capped the way a personal list is.** An admin opens it to
+find out what is outstanding; "and 32 more" is the part they came for. It
+leads with a *Who owes what* table — one row per person, overdue and
+due-this-week — then lists everything in full. The table appears only above
+`SUMMARY_FROM_ROWS` rows **and** more than one owner, because every task in the
+immutable seed is Unassigned and a one-row summary is the heading again in a
+box. The ceiling that remains (`MAX_ROWS_OVERVIEW`) is a guard against a
+pathological backlog, not an editorial choice: Gmail clips a message over
+roughly 102KB.
+
+**Worth knowing:** the overview shows every event's work, so a volunteer who is
+ticked sees more than they can open in the app. The dialog says so. Whether
+that is right is a committee decision, not a bug.
+
 ## The three functions
 
 All 2nd gen, Node 22, `us-central1` — the client calls that region explicitly,

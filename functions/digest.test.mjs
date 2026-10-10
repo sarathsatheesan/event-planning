@@ -30,7 +30,13 @@ const overdueBlock = real.text.split('OVERDUE')[1].split('DUE WITHIN')[0]
 const owners = [...overdueBlock.matchAll(/^ {2}(\S.*?) — \d+$/gm)].map((m) => m[1])
 check('owners are grouped', owners.length > 0, true)
 check('at least one owner heading', owners.length >= 1, true)
-check('long sections are capped', real.text.includes('and ') && real.text.includes('more — open EventOps'), true)
+// The overview is not trimmed the way a personal list is: an admin opens it to
+// find out what is outstanding, and "and 32 more" is the part they came for.
+check('the overview hides nothing', /…and \d+ more/.test(real.text), false)
+// Every task in the immutable seed is Unassigned, so there is exactly one
+// owner and the summary would repeat the section heading in a box. It earns
+// its place once the work is spread across people, which is asserted below.
+check('one owner needs no summary', real.text.includes('WHO OWES WHAT'), false)
 check(
   'Unassigned sorts last within its section',
   owners.includes('Unassigned') ? owners.indexOf('Unassigned') === owners.length - 1 : true,
@@ -248,8 +254,8 @@ check('counts are the true totals, not what is shown', many.text.includes(' — 
 check('and the cap still holds', (many.text.match(/^ {4}\S/gm) ?? []).length, 12)
 check('the remainder is owned up to', many.text.includes('…and 18 more'), true)
 
-// The committee overview keeps the greedy behaviour: the person who owes the
-// most is read first and is worth seeing in full.
+// The committee overview still reads most-owed-first, but it shows everybody's
+// work rather than spending a budget on the first name in the list.
 const greedy = buildDigest({
   events: [ev({ date: '2027-06-01', checklist: [
     ...Array.from({ length: 10 }, (_, j) => task({ id: j, task: `big ${j}`, due: '2026-12-01', assignee: 'Hari' })),
@@ -257,8 +263,23 @@ const greedy = buildDigest({
   ] })],
   today: new Date('2027-01-01T09:00:00'),
 })
-check('overview fills the biggest owner first', (greedy.text.match(/ big \d/g) ?? []).length, 10)
-check('and gives the rest what is left', (greedy.text.match(/ small \d/g) ?? []).length, 2)
+check('overview shows the biggest owner in full', (greedy.text.match(/ big \d/g) ?? []).length, 10)
+check('and everybody else too', (greedy.text.match(/ small \d/g) ?? []).length, 10)
+check('biggest owner still reads first', greedy.text.indexOf('big 0') < greedy.text.indexOf('small 0'), true)
+
+// The summary is the map for a long list; on a short one the list is its own
+// summary and a table above three rows is ceremony.
+const summaryBlock = greedy.text.split('WHO OWES WHAT')[1].split('\n\n')[0]
+check('the summary counts each owner once', (summaryBlock.match(/^ {2}\S/gm) ?? []).length, 2)
+check('and reports their totals', /Hari\s+10 overdue/.test(summaryBlock), true)
+const short = buildDigest({
+  events: [ev({ date: '2027-06-01', checklist: [
+    task({ id: 1, task: 'only one', due: '2026-12-01', assignee: 'Hari' }),
+  ] })],
+  today: new Date('2027-01-01T09:00:00'),
+})
+check('a short overview skips the summary', short.text.includes('WHO OWES WHAT'), false)
+check('and a personal list never has one', many.text.includes('WHO OWES WHAT'), false)
 
 const soonOnly = buildDigest({
   events: [ev({ date: '2027-06-01', checklist: [task({ id: 1, due: '2027-01-03', assigneeEmail: 'hari@icc.org' })] })],

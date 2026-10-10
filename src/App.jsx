@@ -418,10 +418,10 @@ export default function App() {
     if (patch) handleEventChange(event.id, patch)
   }
 
-  async function handleSendDigest(scope) {
+  async function handleSendDigest(scope, to) {
     setDigestBusy(true)
     try {
-      const result = await requestDigestNow(scope)
+      const result = await requestDigestNow(scope, to)
       setSendingDigest(false)
       if (result?.sent) {
         showToast(`Sent to ${result.recipients} committee members — "${result.subject}"`)
@@ -525,7 +525,7 @@ export default function App() {
 
         {sendingDigest && (
           <SendDigestDialog
-            recipientCount={members.length}
+            members={members}
             busy={digestBusy}
             onSend={handleSendDigest}
             onClose={() => setSendingDigest(false)}

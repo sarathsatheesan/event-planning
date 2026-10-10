@@ -314,11 +314,14 @@ export async function deleteArtistFile(path) {
  * is an admin: this button is hidden from everyone else, but a hidden button
  * is not a permission.
  */
-export async function requestDigestNow(scope = 'upcoming') {
+export async function requestDigestNow(scope = 'upcoming', to = null) {
   const fb = await getFirebase()
   if (!fb) throw new Error('Cloud functions are not configured.')
   const { httpsCallable } = fb.functions
-  const result = await httpsCallable(fb.fns, 'sendDigestNow')({ scope })
+  // `to` narrows the send to the people the admin ticked. The function treats
+  // it as a filter over the roster rather than a list of addresses, so this
+  // cannot reach anybody the committee has not already added.
+  const result = await httpsCallable(fb.fns, 'sendDigestNow')({ scope, to })
   return result.data
 }
 
