@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { nextStatus, events as seedEvents, deriveStatus, DEFAULT_COMMITTEE } from './data/events.js'
+import { events as seedEvents, deriveStatus, DEFAULT_COMMITTEE } from './data/events.js'
 import { participantsOf } from './data/assignees.js'
 import { scopeFor, visibleEvents, EVERYTHING } from './lib/access.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
@@ -25,6 +25,7 @@ import Dashboard from './components/Dashboard.jsx'
 import EventDetail from './components/EventDetail.jsx'
 import AuthBar from './components/AuthBar.jsx'
 import MyWork from './components/MyWork.jsx'
+import { statusPatch, ownersPatch } from './lib/work.js'
 import NewEventDialog from './components/NewEventDialog.jsx'
 import CommitteeDialog from './components/CommitteeDialog.jsx'
 import SendDigestDialog from './components/SendDigestDialog.jsx'
@@ -398,27 +399,23 @@ export default function App() {
    */
   function handleWorkStatusChange(row) {
     const event = events.find((e) => e.id === row.eventId)
-    if (!event) return
+    const patch = statusPatch(event, row)
+    if (patch) handleEventChange(event.id, patch)
+  }
 
-    if (row.kind === 'action') {
-      const retro = event.retro
-      if (!retro) return
-      handleEventChange(event.id, {
-        retro: {
-          ...retro,
-          actions: (retro.actions ?? []).map((a) =>
-            a.id === row.itemId ? { ...a, status: nextStatus(a.status) } : a
-          ),
-        },
-      })
-      return
-    }
-
-    handleEventChange(event.id, {
-      checklist: (event.checklist ?? []).map((t) =>
-        t.id === row.itemId ? { ...t, status: nextStatus(t.status) } : t
-      ),
-    })
+  /**
+   * Owners set from My work rather than from inside the event.
+   *
+   * The same edit from a different door, and the reason the door exists:
+   * assigning somebody is what puts them on the Monday email and — through
+   * the participants recomputed on every save — what lets them open the event
+   * they have just been given work on. Doing that fifteen events at a time was
+   * the slow part.
+   */
+  function handleWorkOwnersChange(row, people) {
+    const event = events.find((e) => e.id === row.eventId)
+    const patch = ownersPatch(event, row, people)
+    if (patch) handleEventChange(event.id, patch)
   }
 
   async function handleSendDigest(scope) {
@@ -509,6 +506,7 @@ export default function App() {
             onTagUntagged={isAdmin && untaggedIds.length ? handleTagUntagged : null}
             untaggedCount={untaggedIds.length}
             onStatusChange={handleWorkStatusChange}
+            onOwnersChange={handleWorkOwnersChange}
           />
         ) : (
           <Dashboard

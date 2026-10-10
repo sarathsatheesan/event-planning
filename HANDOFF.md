@@ -274,6 +274,14 @@ accident:
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
   My Work pull these from **every** event including completed ones, unlike
   milestones — a follow-up outlives its event.
+- **Edits made from My work** — `src/lib/work.js`. A row there has been lifted
+  out of its event, so changing one means finding its way back into the right
+  array: `checklist` for a milestone, `retro.actions` for a follow-up.
+  `statusPatch` and `ownersPatch` build the patch; both return **null** rather
+  than an empty object when there is nothing to write, because `saveOverride`
+  replaces the whole document and an empty patch still costs a write. Covered
+  by `src/lib/work.test.mjs`, which is mostly about what a patch must *not*
+  disturb — rebuilding `retro` from its actions alone would erase the notes.
 - **Mail password** — Secret Manager secret `SMTP_PASSWORD` (version 4 as of
   this writing). Never in the repo.
 - **Mail sender config** — `functions/.env`, committed on purpose. It holds the
@@ -504,11 +512,13 @@ would have shipped `Â·` to every recipient. Look at output, do not just assert
 
 Full list in ROADMAP.md. The ones most likely to matter next:
 
-- **31 overdue milestones have no owner**, and whatever **Preview Monday** lists
-  under *Assigned to nobody real* — a typed name matching no committee member.
-  Until both are cleared the Monday run reaches only admins. This is data entry,
-  not code, and it is the single thing standing between the reminder system and
-  any effect.
+- **Milestones with no owner**, and whatever **Preview Monday** lists under
+  *Assigned to nobody real* — a typed name matching no committee member. Still
+  data entry, but it now costs two clicks each rather than fifteen events
+  opened: **My work → Owner → Unassigned** lists every unowned milestone and
+  follow-up with a roster picker on each row. It is worth more than it was
+  yesterday, because an owner is no longer only who gets the Monday email —
+  since reads became committee-scoped it is also who may open the event.
 - **Three rows in the Mela food vendor sheet had shifted columns** and two of
   them read like business vendors rather than food stalls. Carried across
   corrected; the committee should confirm whether they belong.

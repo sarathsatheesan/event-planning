@@ -186,8 +186,13 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
         <h2 className="font-display text-lg font-bold text-ink">Committee</h2>
         <p className="mt-1 text-sm text-ink-soft">
           Everyone listed here can edit events. Admins can also change this list. Sign-in is by
-          Google or an emailed link — the address has to match exactly. Committees are a label for
-          now — tag people as you go, nothing is hidden from anyone yet.
+          Google or an emailed link — the address has to match exactly.
+        </p>
+        <p className="mt-2 text-sm text-ink-soft">
+          Committees decide what people see. Click a committee once to put somebody in it — they
+          will see the events they are personally named on. Click it again so it reads{' '}
+          <span className="font-semibold text-ink">· manages</span> and they see every event that
+          committee runs. Admins see everything regardless.
         </p>
 
         <ul className="mt-4 flex flex-col gap-1.5">

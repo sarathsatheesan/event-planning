@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { taskStatusTone, nextStatus } from '../data/events.js'
 import { useEditable } from '../lib/editing.js'
-import { assigneeNames } from '../data/assignees.js'
+import { assigneeNames, assigneesOf } from '../data/assignees.js'
+import { PeopleField } from './fields.jsx'
 import StatusPill from './StatusPill.jsx'
 import ViewSwitch from './ViewSwitch.jsx'
 
@@ -101,6 +102,7 @@ export default function MyWork({
   onTagUntagged,
   untaggedCount = 0,
   onStatusChange,
+  onOwnersChange,
 }) {
   const editable = useEditable()
   const [person, setPerson] = useState(readPerson)
@@ -110,6 +112,11 @@ export default function MyWork({
   // the point of ticking it off is watching the list shorten. They stay until
   // the page is left, which is what "while I am on this page" means.
   const [justDone, setJustDone] = useState(() => new Set())
+  // Same idea for the owner filter. Picking somebody while the list is filtered
+  // to Unassigned takes the row out of the filter, so without this the line you
+  // just acted on disappears as you finish acting on it — and the one thing you
+  // want after assigning thirty of these is to see the one you did.
+  const [justAssigned, setJustAssigned] = useState(() => new Set())
   // Events that already happened still hold unticked milestones. They are
   // history, not work, and left in they drown the list — the first run of this
   // view showed 65 "overdue" items, nearly all from events long since over.
@@ -133,6 +140,7 @@ export default function MyWork({
             task: task.task,
             category: task.category,
             assignees: ownersOf(task),
+            people: assigneesOf(task),
             due: task.due ?? null,
             status: task.status,
           }))
@@ -152,6 +160,7 @@ export default function MyWork({
           task: action.action,
           category: 'Follow-up',
           assignees: ownersOf(action),
+          people: assigneesOf(action),
           due: action.due || null,
           status: action.status,
         }))
@@ -173,7 +182,7 @@ export default function MyWork({
   const rows = useMemo(() => {
     const mine = all.filter((t) => {
       if (person === EVERYONE) return true
-      if (person === UNASSIGNED) return t.assignees.length === 0
+      if (person === UNASSIGNED) return t.assignees.length === 0 || justAssigned.has(t.key)
       return t.assignees.includes(person)
     })
     const open = showDone ? mine : mine.filter((t) => t.status !== 'Done' || justDone.has(t.key))
@@ -182,7 +191,7 @@ export default function MyWork({
       if (!b.due) return -1
       return a.due.localeCompare(b.due)
     })
-  }, [all, person, showDone, justDone])
+  }, [all, person, showDone, justDone, justAssigned])
 
   // Completed in this visit and still on screen.
   const doneHere = rows.filter((r) => r.status === 'Done').length
@@ -311,6 +320,15 @@ export default function MyWork({
           {overdue > 0 && thisWeek > 0 && ' · '}
           {thisWeek > 0 && <span>{thisWeek} due within 7 days</span>}
           {overdue === 0 && thisWeek === 0 && rows.length > 0 && <span>Nothing due this week.</span>}
+          {/* Something always precedes this when there are rows — the overdue
+              count, the week count, or the "nothing due" line — so the
+              separator is unconditional. */}
+          {person === UNASSIGNED && rows.length > 0 && (
+            <>
+              {' · '}
+              <span>Naming an owner here puts them on the Monday email and lets them open the event.</span>
+            </>
+          )}
           {!showDone && doneHere > 0 && (
             <>
               {(overdue > 0 || thisWeek > 0) && ' · '}
@@ -369,10 +387,27 @@ export default function MyWork({
                         </button>
                         <span aria-hidden="true">·</span>
                         <span className="font-mono">{row.anchor}</span>
-                        {person === EVERYONE && (
+                        {(person === EVERYONE || person === UNASSIGNED) && (
                           <>
                             <span aria-hidden="true">·</span>
-                            <span>{row.assignees.join(', ') || 'Unassigned'}</span>
+                            {/* The owner is a control here, not a label. Opening
+                                fifteen events to hand out thirty milestones is
+                                the reason most of them have no owner at all,
+                                and an unowned milestone now costs its owner
+                                both the Monday email and sight of the event. */}
+                            {editable && onOwnersChange ? (
+                              <PeopleField
+                                people={row.people}
+                                onChange={(people) => {
+                                  if (people.length) {
+                                    setJustAssigned((prev) => new Set(prev).add(row.key))
+                                  }
+                                  onOwnersChange(row, people)
+                                }}
+                              />
+                            ) : (
+                              <span>{row.assignees.join(', ') || 'Unassigned'}</span>
+                            )}
                           </>
                         )}
                       </span>
