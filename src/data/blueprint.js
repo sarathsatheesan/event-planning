@@ -1,4 +1,10 @@
-import { buildTemplateChecklist, realignDueDates, shiftDate, TEMPLATE_CATEGORIES } from './template.js'
+import {
+  buildTemplateChecklist,
+  realignDueDates,
+  shiftDate,
+  templateById,
+  DEFAULT_TEMPLATE_ID,
+} from './template.js'
 import { DEFAULT_ORG, DEFAULT_COMMITTEE } from './events.js'
 
 // Creating next year's event from last year's is the whole point of keeping a
@@ -30,15 +36,18 @@ export function describeSource(source) {
 }
 
 /**
- * A new event — either the standard 23-step blueprint, or a copy of a previous
+ * A new event — either one of the standard blueprints, or a copy of a previous
  * event re-spaced around the new date.
  */
-export function buildEvent({ name, date, source, org, committee }) {
+export function buildEvent({ name, date, source, org, committee, templateId }) {
   // Copying last year's temple event should not quietly produce an ICC one.
   const runBy = org ?? source?.org ?? DEFAULT_ORG
   // Likewise: copying last year's religious event should not produce a
   // cultural one.
   const runFor = committee ?? source?.committee ?? DEFAULT_COMMITTEE
+  // A copy takes its categories from the source below, so the blueprint only
+  // decides the shape of an event started from scratch.
+  const blueprint = templateById(templateId ?? DEFAULT_TEMPLATE_ID)
   const base = {
     name: name.trim(),
     date,
@@ -52,8 +61,8 @@ export function buildEvent({ name, date, source, org, committee }) {
     budget: null,
     spent: null,
     attendanceEst: null,
-    categories: TEMPLATE_CATEGORIES,
-    checklist: buildTemplateChecklist(date),
+    categories: blueprint.categories,
+    checklist: buildTemplateChecklist(date, blueprint.id),
     runOfShow: [],
     vendors: [],
     retro: null,

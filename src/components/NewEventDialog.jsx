@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { describeSource } from '../data/blueprint.js'
 import { ORGS, DEFAULT_ORG, COMMITTEES, DEFAULT_COMMITTEE } from '../data/events.js'
+import { TEMPLATES, DEFAULT_TEMPLATE_ID, templateById } from '../data/template.js'
 
 /**
  * Create an event, optionally from a previous one.
@@ -9,7 +10,17 @@ import { ORGS, DEFAULT_ORG, COMMITTEES, DEFAULT_COMMITTEE } from '../data/events
  * every year, so last year's event already holds the right milestones, the
  * right vendors and the right run of show — what it does not hold is this
  * year's dates or a clean set of statuses.
+ *
+ * For a brand new kind of event there is no last year to copy, so the list
+ * starts with the blueprints — the cultural one and the religious one, which
+ * share almost nothing but a date.
  */
+
+// One <select> holds two different kinds of choice. The prefix keeps them
+// apart, so a blueprint id can never be mistaken for an event id.
+const TPL = 'tpl:'
+const describeTemplate = (t) =>
+  `${t.name} — ${t.rows.length} milestones`
 
 const FIELD =
   'focus-ring w-full rounded-md border border-border bg-paper px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-soft/60'
@@ -27,7 +38,7 @@ function labelFor(event) {
 export default function NewEventDialog({ events, onCreate, onClose }) {
   const [name, setName] = useState('')
   const [date, setDate] = useState('')
-  const [sourceId, setSourceId] = useState('')
+  const [startFrom, setStartFrom] = useState(TPL + DEFAULT_TEMPLATE_ID)
   const [org, setOrg] = useState(DEFAULT_ORG)
   const [committee, setCommittee] = useState(DEFAULT_COMMITTEE)
   const [error, setError] = useState(null)
@@ -37,8 +48,12 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
     () => [...events].sort((a, b) => b.date.localeCompare(a.date)),
     [events]
   )
+  const templateId = startFrom.startsWith(TPL) ? startFrom.slice(TPL.length) : null
+  const sourceId = templateId ? '' : startFrom
   const source = sources.find((e) => e.id === sourceId) ?? null
   const summary = describeSource(source)
+  const template = templateById(templateId ?? DEFAULT_TEMPLATE_ID)
+  const span = `${template.rows[0][0]} through ${template.rows[template.rows.length - 1][0]}`
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
@@ -57,7 +72,7 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
       setError('Pick the date it happens.')
       return
     }
-    onCreate({ name: trimmed, date, sourceId: sourceId || null, org, committee })
+    onCreate({ name: trimmed, date, sourceId: sourceId || null, templateId, org, committee })
   }
 
   return (
@@ -75,8 +90,8 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
       >
         <h2 className="font-display text-lg font-bold text-ink">New event</h2>
         <p className="mt-1 text-sm text-ink-soft">
-          Start from the standard blueprint, or copy a previous event and let the dates re-space
-          themselves.
+          Start from one of the standard blueprints, or copy a previous event and let the dates
+          re-space themselves.
         </p>
 
         <div className="mt-4 flex flex-col gap-3">
@@ -130,20 +145,28 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
           <label className="flex flex-col gap-1">
             <span className={LABEL}>Start from</span>
             <select
-              value={sourceId}
+              value={startFrom}
               onChange={(e) => {
-                setSourceId(e.target.value)
+                setStartFrom(e.target.value)
                 const picked = events.find((ev) => ev.id === e.target.value)
                 if (picked?.org) setOrg(picked.org)
               }}
               className={FIELD}
             >
-              <option value="">Standard template — 23 milestones</option>
-              {sources.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {labelFor(e)}
-                </option>
-              ))}
+              <optgroup label="Blueprints">
+                {TEMPLATES.map((t) => (
+                  <option key={t.id} value={TPL + t.id}>
+                    {describeTemplate(t)}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Copy a previous event">
+                {sources.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {labelFor(e)}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </label>
 
@@ -160,9 +183,11 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
               </>
             ) : (
               <>
-                Creates the standard 23-milestone blueprint — T-90 through T-1 — with due dates
-                calculated from
-                {date ? ' the date above' : ' the date you pick'}.
+                Creates <span className="font-semibold text-ink">{template.name}</span> —{' '}
+                {template.rows.length} milestones for {template.blurb}, spaced {span}, with due
+                dates calculated from
+                {date ? ' the date above' : ' the date you pick'}. Nothing is assigned; owners are
+                yours to fill in.
               </>
             )}
           </div>

@@ -94,6 +94,21 @@ accident:
   add one field is to send back the record it was merged into. It touches
   override documents that already exist and does not create any: an event with
   no saved edits has nothing for such a query to lose.
+- **Blueprints** — `TEMPLATES` in `src/data/template.js`, a list of
+  `{ id, name, blurb, categories, rows }`. Two of them: `icc` ("Standard ICC
+  Template", 23 milestones, T-90 → T-1, the cultural shape) and `temple`
+  ("Standard Temple Template", 26 milestones, T-60 → T-1 — muhurtham, priests,
+  samagri, prasadam, annadanam, the darshan queue; no artists and no
+  ticketing, and a shorter runway because a puja is planned in two months, not
+  three). The New event dialog lists them in a **Blueprints** optgroup above a
+  **Copy a previous event** one, and a blueprint's value carries a `tpl:`
+  prefix so it can never be confused with an event id in the same `<select>`.
+  `buildEvent` takes `templateId` and reads both the categories and the
+  checklist off the chosen entry; a **copy** ignores it and keeps the source's
+  categories, which is what you want when last year's temple event is the
+  source. An unknown id falls back to `icc` rather than producing an event
+  with no checklist. Adding a third shape — sponsorship, a general body
+  meeting — is one entry in that list and nothing else.
 - **Events** — `src/data/events.js` is immutable seed. Edits layer on top as
   `eventOverrides/{eventId}` in Firestore. An override whose id is *not* in the
   seed and that carries a name and date **is** a user-created event; see
@@ -561,6 +576,30 @@ addresses are in the logs — search `Reminder send failed`.
    has to be skipped while `busy`, because our own write arrives back through
    the same subscription.
 
+26. **Fifteen seed events depend on a default argument.** `events.js` calls
+   `buildTemplateChecklist(date)` with one argument thirteen times. When the
+   second blueprint landed, that function grew a `templateId` parameter — and
+   if the default had ever moved off `icc`, every seed event would silently
+   have changed shape with no error and no diff in `events.js` to explain it.
+   Symptom to watch for: a seed event showing *Rituals* or *Prasadam*
+   categories. `src/data/template.test.mjs` asserts
+   `buildTemplateChecklist(d)` is deep-equal to
+   `buildTemplateChecklist(d, 'icc')`, which is the whole point of that file.
+
+27. **A dialog can be driven headless without signing in.** The documented
+   route — build with the `apiKey` blanked, serve, drive — is right for
+   anything that needs the app's own state. For a change confined to one
+   dialog it is slower than it needs to be, because *New event* only renders
+   for a signed-in committee member and Firebase auth cannot reach the network
+   from the container. Symptom: Playwright times out waiting for a button that
+   is simply not there, and the page reads `Sign in with Google`. Mount the
+   component on its own instead — a two-file harness beside `index.html` that
+   renders the dialog with the real seed and dumps `onCreate`'s payload
+   through `buildEvent` into a `<pre>` — and drive that. Keep the harness out
+   of the repo: Tailwind v4 scans the project root, and a scratch file at the
+   root has already turned a literal string into a CSS utility once (gotcha
+   below on `@container`).
+
 ## How this codebase gets tested
 
 No test framework. Two approaches, both worth continuing:
@@ -569,8 +608,10 @@ No test framework. Two approaches, both worth continuing:
   At the repo root, `npm test` runs `src/lib/filters.test.mjs` (calendar
   filters, the org backfill, the sponsor and business-vendor seeds),
   `src/lib/menu.test.mjs` (the duplicate-dish matcher, against the committee's
-  real 82-item menu) and `src/lib/menuImport.test.mjs` (the menu parser against
-  realistically messy input). In `functions/`, `npm test` runs
+  real 82-item menu), `src/lib/menuImport.test.mjs` (the menu parser against
+  realistically messy input) and `src/data/template.test.mjs` (both blueprints
+  well formed, the seed's default argument guarded, and `buildEvent` carrying
+  the right one). In `functions/`, `npm test` runs
   `digest.test.mjs` against the real calendar at several dates and
   `mailer.test.mjs` for message shape and that the password cannot leak into
   anything loggable. **Both** are worth running; the root one does not include
@@ -664,6 +705,15 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   `src/data/assignees.js` staged, the two scalars are dead weight: drop them
   from `withAssignees()` and from `template.js`, and leave `assigneesOf()`
   reading them so records written before today keep working.
+- **The temple blueprint is built but unused.** *Standard Temple Template* is
+  in the New event dropdown as of 10 Oct 2026, with nobody assigned to any of
+  its 26 milestones, deliberately — it was asked for as something to start
+  from, not as an event. Nothing in the app picks it automatically: an event
+  tagged `religious` created from the ICC blueprint still gets artists and
+  ticketing. Defaulting the blueprint from the chosen committee is a two-line
+  change in `NewEventDialog` and has not been asked for; the committee may
+  prefer choosing. Sponsorship, development and the general body meeting still
+  have no shape of their own.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.
 - **Four of the six committees have no manager.** Sponsorship and Development
