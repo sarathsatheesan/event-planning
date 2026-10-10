@@ -14,7 +14,17 @@ const here = dirname(fileURLToPath(import.meta.url))
 const from = join(here, '..', 'src', 'data')
 const to = join(here, 'seed')
 
-const FILES = ['events.js', 'template.js', 'storage.js']
+// events.js imports the Mela's stalls, sponsors and booths, so staging it
+// without them leaves seed/events.js unable to resolve its own imports and
+// the digest dead on arrival. Every module the chain needs is listed here.
+const FILES = [
+  'events.js',
+  'template.js',
+  'storage.js',
+  'melaFood.js',
+  'sponsors.js',
+  'businessVendors.js',
+]
 
 await mkdir(to, { recursive: true })
 for (const file of FILES) {
