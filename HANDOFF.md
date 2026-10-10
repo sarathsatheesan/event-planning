@@ -460,6 +460,12 @@ addresses are in the logs — search `Reminder send failed`.
    back 200, and a document outside the scope must be 403. That script is
    `scripts/leak-test.js` — paste it into the console on the live site — and it
    is the gate, not the calendar rendering fewer cards.
+   The cheaper route, and the one actually used on 10 Oct 2026, is the Firebase
+   console's **Rules Playground**: it runs the *deployed* rules against the
+   *real* roster with no second login. Set simulation type `get`, location
+   `/eventOverrides/<id>`, turn on Authenticated and set **both** `email` and
+   `email_verified` — the rule reads `email_verified`, so leaving it unticked
+   denies everything for the wrong reason and looks like a broken rule.
 
 ## How this codebase gets tested
 
@@ -533,19 +539,18 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   reading them so records written before today keep working.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.
-- **Turn committee scoping on, and prove it.** Everything is written and
-  deployed; what is left is three steps in order, and the last one is the gate.
-  1. `firebase deploy --only firestore:rules`. Harmless on its own — no
-     `managers` key yet, so nothing narrows.
-  2. An admin opens **Committee** and saves once. This writes `managers` and
-     turns scoping on, and the dialog will now refuse the save until every
-     non-admin has at least one committee. That refusal is the point: untagged
-     would otherwise have to mean either everything or nothing.
-  3. Run `scripts/leak-test.js` in the browser console signed in as a manager
-     **and** as a volunteer, and check the two doors it cannot reach: a PDF export holds
-     nothing outside the scope, and Preview Monday lists only that person's own
-     rows. Until this is done, treat the rules as untested.
-
-  Rolling back is `git checkout <previous> -- firestore.rules` and the same
-  deploy; the client is safe either way, because asking for less than you may
-  have is always allowed.
+- **Nobody manages a committee, so nobody has committee-wide sight.** Scoping
+  went live 10 Oct 2026 and `managers` was written **empty**: all eight
+  non-admin members are tagged volunteer. The effect is sharper than the design
+  intended — each of them now sees only the events their address appears on,
+  which today is between **zero and three of seventeen**, because `participants`
+  is still sparse. Two fixes, both data rather than code: tag whoever runs a
+  committee as *managing* it (the third chip state), and keep assigning
+  milestones from the roster picker, which is the act that fills `participants`.
+  Tagging the first manager is also the first time the manager branch of the
+  rule runs against real data — re-check it in the Rules Playground then.
+- **Rolling the rules back** is `git checkout <previous> -- firestore.rules`
+  and `firebase deploy --only firestore:rules`. The client is safe either way,
+  because asking for less than you may have is always allowed. Clearing
+  `managers` off the roster document also switches enforcement off without a
+  deploy, by the same test that switched it on.
