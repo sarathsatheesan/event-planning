@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FALLBACK_COMMITTEE, BOOTSTRAP_ADMINS } from '../lib/firebaseConfig.js'
 import { COMMITTEES } from '../data/events.js'
-import { committeeIdsOf } from '../lib/committee.js'
+import { storedCommitteesOf } from '../lib/committee.js'
 
 /**
  * Who can edit, managed in the app.
@@ -13,7 +13,9 @@ import { committeeIdsOf } from '../lib/committee.js'
  * Committees are assigned here too, one person at a time. Nobody has to be
  * tagged for the app to work: an untagged member behaves exactly as they did
  * before this existed, so the list can be filled in over weeks rather than in
- * one sitting.
+ * one sitting. An admin is in every committee by definition — their chips show
+ * on and locked, and their own selection is kept underneath, so demoting them
+ * to member restores it rather than leaving them in all six.
  *
  * Two safeguards worth knowing. The permanent owners cannot be removed here —
  * the rules let them in regardless, so removing them would only make this
@@ -35,7 +37,7 @@ function seedFrom(roster) {
       email: m.email ?? '',
       name: m.name ?? '',
       role: m.role === 'admin' ? 'admin' : 'member',
-      committees: committeeIdsOf(m),
+      committees: storedCommitteesOf(m),
     }))
   }
   // No roster saved yet: show what the rules are currently honouring, so the
@@ -80,7 +82,10 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
 
   const filled = members.filter((m) => m.email.trim())
   const admins = filled.filter((m) => m.role === 'admin')
-  const untagged = filled.filter((m) => (m.committees ?? []).length === 0).length
+  // Admins are in every committee by definition, so they are never "untagged".
+  const untagged = filled.filter(
+    (m) => m.role !== 'admin' && (m.committees ?? []).length === 0
+  ).length
   const losingSelf =
     currentEmail &&
     !filled.some((m) => m.email.trim().toLowerCase() === currentEmail.toLowerCase())
@@ -198,14 +203,15 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
                     Committees
                   </span>
                   {COMMITTEES.map((c) => {
-                    const on = (m.committees ?? []).includes(c.id)
+                    const on = m.role === 'admin' || (m.committees ?? []).includes(c.id)
                     return (
                       <button
                         key={c.id}
                         type="button"
                         onClick={() => toggleCommittee(i, c.id)}
                         aria-pressed={on}
-                        className={`focus-ring rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
+                        disabled={m.role === 'admin'}
+                        className={`focus-ring rounded-full border px-2 py-0.5 text-[11px] font-semibold transition disabled:cursor-not-allowed ${
                           on
                             ? 'border-accent bg-accent text-accent-ink'
                             : 'border-border text-ink-soft hover:text-ink'
@@ -215,6 +221,11 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
                       </button>
                     )
                   })}
+                  {m.role === 'admin' && (
+                    <span className="text-[10px] text-ink-soft">
+                      admins are in every committee
+                    </span>
+                  )}
                 </div>
               </li>
             )
