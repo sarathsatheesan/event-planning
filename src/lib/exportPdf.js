@@ -1,5 +1,6 @@
 import { formatTime, offsetFromStart } from './records.js'
 import { formatDateRange } from '../data/events.js'
+import { assigneeNames } from '../data/assignees.js'
 import { rosterSummary } from './artists.js'
 
 // The four phases, in the order they appear in the app. `key` matches the
@@ -203,7 +204,7 @@ export async function exportEventPdf(event, selectedKeys) {
       t.anchor,
       t.task || '(untitled)',
       t.category,
-      t.assignee?.trim() || 'Unassigned',
+      assigneeNames(t).join(', ') || 'Unassigned',
       t.due,
       t.status,
     ])

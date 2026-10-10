@@ -449,5 +449,47 @@ if (process.env.WRITE_SAMPLE) {
   console.log('\nwrote sample email ->', process.env.WRITE_SAMPLE)
 }
 
+console.log('\n--- more than one owner ---')
+// The whole point: a job split across three people reaches all three, and the
+// old single-owner shape keeps working untouched beside it.
+const shared = ev({
+  date: '2027-01-20',
+  checklist: [
+    task({
+      id: 1,
+      task: 'Submit the conditional use permit',
+      due: '2026-12-01',
+      assignees: [
+        { name: 'Hari', email: 'hari@icc.org' },
+        { name: 'Pavithra', email: 'pavithra@icc.org' },
+        { name: 'Ravi', email: 'ravi@icc.org' },
+      ],
+    }),
+  ],
+})
+const sharedWhen = new Date('2027-01-01T09:00:00')
+for (const who of ['hari', 'pavithra', 'ravi']) {
+  const mine = buildDigest({ events: [shared], today: sharedWhen, forPerson: { email: `${who}@icc.org`, name: who } })
+  check(`${who} is reminded about the shared job`, mine?.counts.overdue, 1)
+}
+check(
+  'somebody not on it is not',
+  buildDigest({ events: [shared], today: sharedWhen, forPerson: { email: 'suma@icc.org', name: 'Suma' } }),
+  null
+)
+// The committee overview lists it under each of them, because each of them owes it.
+const everyone = buildDigest({ events: [shared], today: sharedWhen })
+check('the overview names all three', ['Hari', 'Pavithra', 'Ravi'].every((n) => everyone.text.includes(n)), true)
+
+// The mirror: a record written by the new client is still readable by a digest
+// that has not been redeployed, which is the deploy window this has to survive.
+const mirrored = task({ id: 2, due: '2026-12-01', assignee: 'Hari', assigneeEmail: 'hari@icc.org', assignees: [{ name: 'Hari', email: 'hari@icc.org' }] })
+const notDoubled = buildDigest({ events: [ev({ date: '2027-01-20', checklist: [mirrored] })], today: sharedWhen, forPerson: { email: 'hari@icc.org', name: 'Hari' } })
+check('a mirrored record is counted once, not twice', notDoubled.counts.overdue, 1)
+
+// Nobody on it behaves exactly as before.
+const nobody = buildDigest({ events: [ev({ date: '2027-01-20', checklist: [task({ id: 3, due: '2026-12-01', assignee: '', assigneeEmail: null })] })], today: sharedWhen })
+check('unowned work still produces one row', nobody.counts.overdue, 1)
+
 console.log(fails === 0 ? '\nALL PASS' : `\n${fails} FAILURES`)
 process.exit(fails === 0 ? 0 : 1)

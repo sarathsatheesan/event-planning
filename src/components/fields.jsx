@@ -150,6 +150,91 @@ export function InlineSelect({ value, onChange, options, className = '', ariaLab
 const UNASSIGNED = ''
 const LEGACY = '__legacy__'
 
+const OWNER_CHIP =
+  'inline-flex items-center gap-1 rounded-full border border-border-soft bg-paper px-2 py-0.5 text-[11px] font-medium text-ink'
+
+/**
+ * The people on one piece of work.
+ *
+ * Same promises as PersonField, which it replaces wherever work can be shared:
+ * picking from the roster records the address beside the name, a typed name
+ * that matches nobody is kept and labelled rather than wiped, and with no
+ * roster loaded it degrades to a plain text field.
+ *
+ * Chips plus an add control rather than a multi-select listbox: most work has
+ * one owner and should still read as one word, and a listbox tall enough to
+ * pick three from thirteen would dominate a milestone row.
+ */
+export function PeopleField({ people: chosen, onChange, placeholder = 'Unassigned', className = '' }) {
+  const editable = useEditable()
+  const roster = useCommittee()
+  const list = chosen ?? []
+
+  const labelFor = (a) => {
+    const matched = a.email ? roster.find((p) => p.email === String(a.email).toLowerCase()) : null
+    return matched?.label ?? (a.name || a.email || '')
+  }
+
+  if (!editable) {
+    return (
+      <ReadOnly value={list.map(labelFor).join(', ')} placeholder={placeholder} className={className} />
+    )
+  }
+
+  if (roster.length === 0) {
+    // No roster has loaded, so there is nobody to pick. One free-text owner is
+    // what this field was before the roster existed, and still beats nothing.
+    return (
+      <InlineField
+        value={list[0]?.name ?? ''}
+        onChange={(v) => onChange(v.trim() ? [{ name: v, email: null }] : [])}
+        placeholder={placeholder}
+        className={className}
+      />
+    )
+  }
+
+  const taken = new Set(list.map((a) => (a.email ?? '').toLowerCase()).filter(Boolean))
+  const available = roster.filter((p) => !taken.has(p.email))
+
+  return (
+    <span className={`inline-flex flex-wrap items-center gap-1 ${className}`}>
+      {list.map((a, i) => (
+        <span key={a.email || `${a.name}-${i}`} className={OWNER_CHIP}>
+          {labelFor(a)}
+          {!a.email && <span className="text-ink-soft"> — not on the committee</span>}
+          <button
+            type="button"
+            onClick={() => onChange(list.filter((_, j) => j !== i))}
+            className="focus-ring rounded text-ink-soft transition hover:text-critical"
+          >
+            <span aria-hidden="true">×</span>
+            <span className="sr-only">Remove {labelFor(a)}</span>
+          </button>
+        </span>
+      ))}
+      {available.length > 0 && (
+        <select
+          value={UNASSIGNED}
+          aria-label={list.length ? 'Add another owner' : placeholder}
+          onChange={(e) => {
+            const person = roster.find((p) => p.email === e.target.value)
+            if (person) onChange([...list, { name: person.name || person.email, email: person.email }])
+          }}
+          className="focus-ring rounded-md border border-border-soft bg-transparent px-1 py-0.5 transition hover:border-border focus:border-accent focus:bg-surface"
+        >
+          <option value={UNASSIGNED}>{list.length ? '+ add' : placeholder}</option>
+          {available.map((p) => (
+            <option key={p.email} value={p.email}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      )}
+    </span>
+  )
+}
+
 /**
  * Picks a person from the committee roster, storing their address alongside
  * the name so reminders have somewhere to go.

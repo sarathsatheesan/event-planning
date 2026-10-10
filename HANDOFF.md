@@ -178,6 +178,21 @@ accident:
   was never filled at all. A stored flag could only ever agree with those two
   or contradict them. `isPaid` still reads a legacy `paymentReceived` as a last
   term, so a tick made before this changed is honoured.
+- **Who owns a task** — `assignees: [{ name, email }]` on milestones and
+  wrap-up follow-ups, read through `assigneesOf()` in `src/data/assignees.js`.
+  It lives in `src/data` rather than `src/lib` because `copy-seed.mjs` stages
+  that directory into `functions/`, and the digest needs the same definition
+  the app uses. The old `assignee` / `assigneeEmail` scalars are **mirrored**
+  from the first owner, not dropped: hosting deploys itself on push and
+  functions never do, so there is always a window where a new client writes
+  records an old digest has to read. The mirror makes that window cost the
+  second and third owner a reminder instead of costing the first one too. The
+  weekly digest emits **one row per owner** — three people on one job is three
+  people who owe it — while **My Work shows one row per task**, because the
+  same job listed three times reads as three jobs.
+  `PeopleField` replaced `PersonField` wherever work can be shared.
+  `PersonField` deliberately stays for the event lead, a sponsor's Temple POC
+  and a run-of-show slot: those are one person by nature.
 - **Wrap-up follow-ups** — `event.retro.actions[]`, shape
   `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
@@ -325,8 +340,8 @@ addresses are in the logs — search `Reminder send failed`.
    npm run build` there — the repo is public, so the clone needs no credential.
    Do not run `npm install` in the mounted folder: it would replace the Mac's
    binaries with Linux ones and break the build on the laptop.
-16. **`filters.test.mjs` ends in `process.exit`, so anything appended after it
-   never runs.** Symptom: a new block of checks prints nothing and the suite
+16. **`filters.test.mjs` and `digest.test.mjs` both end in `process.exit`, so
+   anything appended after it never runs.** Symptom: a new block of checks prints nothing and the suite
    still says ALL PASS — the worst kind of green, because it looks like
    coverage. New checks go *above* the two summary lines at the bottom. Worth
    reading the output and counting, not just trusting the exit code.
@@ -399,6 +414,12 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   controls — on **India Mela only** now, since the simple *Menu* variant does
   not render them at all. Cosmetic, but it is the one place the read-only rule
   is not kept.
+- **Remove the `assignee` / `assigneeEmail` mirror.** Kept only so a digest
+  that has not been redeployed still finds an owner on records written by the
+  new client. Once `firebase deploy --only functions` has run with
+  `src/data/assignees.js` staged, the two scalars are dead weight: drop them
+  from `withAssignees()` and from `template.js`, and leave `assigneesOf()`
+  reading them so records written before today keep working.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.
 - **What an untagged member means, once committees are enforced.** Today a

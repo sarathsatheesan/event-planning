@@ -1,4 +1,5 @@
-import { InlineField, NumberField, PersonField, RemoveButton, AddButton } from '../fields.jsx'
+import { InlineField, NumberField, PeopleField, RemoveButton, AddButton } from '../fields.jsx'
+import { assigneesOf, withAssignees } from '../../data/assignees.js'
 import KanbanBoard, { ViewToggle } from '../KanbanBoard.jsx'
 import StatusPill from '../StatusPill.jsx'
 import { taskStatusTone, TASK_STATUSES } from '../../data/events.js'
@@ -282,14 +283,11 @@ export default function PostEventWrapUp({ event, onRetroChange, view = 'list', o
                     className="w-full text-sm font-medium text-ink"
                   />
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-1 pl-1.5 text-xs text-ink-soft">
-                    <PersonField
-                      value={a.assignee}
-                      email={a.assigneeEmail}
-                      onChange={(name, email) =>
-                        patchAction(a.id, { assignee: name, assigneeEmail: email })
-                      }
+                    <PeopleField
+                      people={assigneesOf(a)}
+                      onChange={(next) => patchAction(a.id, withAssignees(next))}
                       placeholder="Unassigned"
-                      className="w-32 text-xs text-ink-soft"
+                      className="text-xs text-ink-soft"
                     />
                     <span aria-hidden="true">·</span>
                     <span>due</span>

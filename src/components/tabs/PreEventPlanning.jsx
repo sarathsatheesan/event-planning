@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { taskStatusTone, TASK_STATUSES } from '../../data/events.js'
 import { realignDueDates, shiftDate, ANCHOR_ORDER, ANCHOR_DAYS } from '../../data/template.js'
 import StatusPill from '../StatusPill.jsx'
-import { InlineField, InlineSelect, PersonField, RemoveButton, AddButton } from '../fields.jsx'
+import { InlineField, InlineSelect, PeopleField, RemoveButton, AddButton } from '../fields.jsx'
+import { assigneesOf, assigneeNames, withAssignees } from '../../data/assignees.js'
 import { nextId } from '../../lib/records.js'
 import { useEditable } from '../../lib/editing.js'
 import KanbanBoard, { ViewToggle } from '../KanbanBoard.jsx'
@@ -35,8 +36,8 @@ export default function PreEventPlanning({ event, onChecklistChange, view = 'lis
     const names = new Set()
     let hasUnassigned = false
     for (const t of tasks) {
-      const name = (t.assignee ?? '').trim()
-      if (name && name.toLowerCase() !== 'unassigned') names.add(name)
+      const mine = assigneeNames(t).filter((n) => n.toLowerCase() !== 'unassigned')
+      if (mine.length) for (const name of mine) names.add(name)
       else hasUnassigned = true
     }
     return { names: [...names].sort((a, b) => a.localeCompare(b)), hasUnassigned }
@@ -47,9 +48,8 @@ export default function PreEventPlanning({ event, onChecklistChange, view = 'lis
       tasks.filter((t) => {
         if (category !== 'All' && t.category !== category) return false
         if (owner === 'All') return true
-        const name = (t.assignee ?? '').trim()
-        const isUnassigned = !name || name.toLowerCase() === 'unassigned'
-        return owner === UNASSIGNED ? isUnassigned : name === owner
+        const mine = assigneeNames(t).filter((n) => n.toLowerCase() !== 'unassigned')
+        return owner === UNASSIGNED ? mine.length === 0 : mine.includes(owner)
       }),
     [tasks, category, owner]
   )
@@ -78,7 +78,9 @@ export default function PreEventPlanning({ event, onChecklistChange, view = 'lis
         // Inherit the active category filter, so a new row stays visible.
         category: category !== 'All' ? category : (event.categories[0] ?? 'Venue'),
         anchor,
-        assignee: owner !== 'All' && owner !== UNASSIGNED ? owner : '',
+        ...withAssignees(
+          owner !== 'All' && owner !== UNASSIGNED ? [{ name: owner, email: null }] : []
+        ),
         due: shiftDate(event.date, days),
         status: 'Not Started',
       },
@@ -208,7 +210,7 @@ export default function PreEventPlanning({ event, onChecklistChange, view = 'lis
                 {t.category}
               </p>
               <p className="mt-0.5 text-xs text-ink-soft">
-                {t.assignee?.trim() ? t.assignee : 'Unassigned'}
+                {assigneeNames(t).join(', ') || 'Unassigned'}
                 {t.due && (
                   <>
                     {' · due '}
@@ -263,14 +265,11 @@ export default function PreEventPlanning({ event, onChecklistChange, view = 'lis
                           className="text-xs text-ink-soft"
                         />
                         <span aria-hidden="true">·</span>
-                        <PersonField
-                          value={t.assignee}
-                          email={t.assigneeEmail}
-                          onChange={(name, email) =>
-                            patchTask(t.id, { assignee: name, assigneeEmail: email })
-                          }
+                        <PeopleField
+                          people={assigneesOf(t)}
+                          onChange={(next) => patchTask(t.id, withAssignees(next))}
                           placeholder="Unassigned"
-                          className="w-32 text-xs text-ink-soft"
+                          className="text-xs text-ink-soft"
                         />
                         <span aria-hidden="true">·</span>
                         <span>due</span>

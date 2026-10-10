@@ -24,6 +24,7 @@ const FILES = [
   'melaFood.js',
   'sponsors.js',
   'businessVendors.js',
+  'assignees.js',
 ]
 
 await mkdir(to, { recursive: true })

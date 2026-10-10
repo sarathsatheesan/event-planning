@@ -16,6 +16,10 @@
 // reminder have to agree about what "overdue" means, where the week ends and
 // how a date reads, and the only way to guarantee that is to compute it once.
 
+// Staged into ./seed by copy-seed.mjs, so the digest reads owners exactly
+// the way the app writes them.
+import { assigneesOf } from './seed/assignees.js'
+
 const SOON_DAYS = 7
 const HORIZON_DAYS = 14
 // A section listing thirty-one items is a wall, and a wall gets archived. Show
@@ -40,6 +44,12 @@ function longDate(stamp) {
     month: 'short',
     day: 'numeric',
   })
+}
+
+/** Everyone on an item, or a single empty owner so unowned work still shows. */
+function owners(item) {
+  const list = assigneesOf(item)
+  return list.length ? list : [{ name: '', email: null }]
 }
 
 /** Some rows carry the literal string "Unassigned" rather than being blank. */
@@ -174,15 +184,21 @@ function collectRows(live, stamp, keep = () => true, withFollowUps = []) {
   for (const event of withFollowUps) {
     for (const action of event.retro?.actions ?? []) {
       if (action.status === 'Done' || !action.due) continue
-      push({
-        owner: ownerOf(action.assignee),
-        ownerEmail: action.assigneeEmail ?? null,
-        task: action.action || '(untitled follow-up)',
-        event: event.name,
-        due: action.due,
-        delta: daysBetween(stamp, action.due),
-        kind: 'follow-up',
-      })
+      // One row per owner. Three people on one job means three people who
+       // owe it: each gets it in their own reminder, and the committee
+       // overview lists it under each of their names, which is what "who owes
+       // what" means. Nobody on it still produces exactly one row.
+      for (const who of owners(action)) {
+        push({
+          owner: ownerOf(who.name),
+          ownerEmail: who.email ?? null,
+          task: action.action || '(untitled follow-up)',
+          event: event.name,
+          due: action.due,
+          delta: daysBetween(stamp, action.due),
+          kind: 'follow-up',
+        })
+      }
     }
   }
 
@@ -190,18 +206,19 @@ function collectRows(live, stamp, keep = () => true, withFollowUps = []) {
     for (const task of event.checklist ?? []) {
       if (task.status === 'Done' || !task.due) continue
       const delta = daysBetween(stamp, task.due)
-      const row = {
-        owner: ownerOf(task.assignee),
-        // Present once the milestone was assigned from the roster rather than
-        // typed. This is what a personal reminder is addressed with.
-        ownerEmail: task.assigneeEmail ?? null,
-        task: task.task || '(untitled)',
-        event: event.name,
-        due: task.due,
-        delta,
-        kind: 'milestone',
+      for (const who of owners(task)) {
+        push({
+          owner: ownerOf(who.name),
+          // Present once the milestone was assigned from the roster rather
+          // than typed. This is what a personal reminder is addressed with.
+          ownerEmail: who.email ?? null,
+          task: task.task || '(untitled)',
+          event: event.name,
+          due: task.due,
+          delta,
+          kind: 'milestone',
+        })
       }
-      push(row)
     }
   }
   return { overdue, soon }

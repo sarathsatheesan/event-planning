@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { taskStatusTone, nextStatus } from '../data/events.js'
 import { useEditable } from '../lib/editing.js'
+import { assigneeNames } from '../data/assignees.js'
 import StatusPill from './StatusPill.jsx'
 import ViewSwitch from './ViewSwitch.jsx'
 
@@ -28,6 +29,17 @@ const UNASSIGNED = '__unassigned__'
 function ownerOf(assignee) {
   const trimmed = assignee?.trim() ?? ''
   return trimmed.toLowerCase() === 'unassigned' ? '' : trimmed
+}
+
+/**
+ * Everyone on a row, as display names.
+ *
+ * One row per task even when three people own it — unlike the weekly digest,
+ * which sends each of them their own copy. This is a to-do list, and the same
+ * job listed three times reads as three jobs.
+ */
+function ownersOf(item) {
+  return assigneeNames(item).map(ownerOf).filter(Boolean)
 }
 
 function readPerson() {
@@ -118,7 +130,7 @@ export default function MyWork({
             anchor: task.anchor,
             task: task.task,
             category: task.category,
-            assignee: ownerOf(task.assignee),
+            assignees: ownersOf(task),
             due: task.due ?? null,
             status: task.status,
           }))
@@ -137,7 +149,7 @@ export default function MyWork({
           anchor: 'Follow-up',
           task: action.action,
           category: 'Follow-up',
-          assignee: ownerOf(action.assignee),
+          assignees: ownersOf(action),
           due: action.due || null,
           status: action.status,
         }))
@@ -150,7 +162,7 @@ export default function MyWork({
     const names = new Set()
     let hasUnassigned = false
     for (const t of all) {
-      if (t.assignee) names.add(t.assignee)
+      if (t.assignees.length) for (const name of t.assignees) names.add(name)
       else hasUnassigned = true
     }
     return { names: [...names].sort((a, b) => a.localeCompare(b)), hasUnassigned }
@@ -159,8 +171,8 @@ export default function MyWork({
   const rows = useMemo(() => {
     const mine = all.filter((t) => {
       if (person === EVERYONE) return true
-      if (person === UNASSIGNED) return !t.assignee
-      return t.assignee === person
+      if (person === UNASSIGNED) return t.assignees.length === 0
+      return t.assignees.includes(person)
     })
     const open = showDone ? mine : mine.filter((t) => t.status !== 'Done' || justDone.has(t.key))
     return open.sort((a, b) => {
@@ -345,7 +357,7 @@ export default function MyWork({
                         {person === EVERYONE && (
                           <>
                             <span aria-hidden="true">·</span>
-                            <span>{row.assignee || 'Unassigned'}</span>
+                            <span>{row.assignees.join(', ') || 'Unassigned'}</span>
                           </>
                         )}
                       </span>
