@@ -549,16 +549,17 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   reading them so records written before today keep working.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.
-- **Nobody manages a committee, so nobody has committee-wide sight.** Scoping
-  went live 10 Oct 2026 and `managers` was written **empty**: all eight
-  non-admin members are tagged volunteer. The effect is sharper than the design
-  intended — each of them now sees only the events their address appears on,
-  which today is between **zero and three of seventeen**, because `participants`
-  is still sparse. Two fixes, both data rather than code: tag whoever runs a
-  committee as *managing* it (the third chip state), and keep assigning
-  milestones from the roster picker, which is the act that fills `participants`.
-  Tagging the first manager is also the first time the manager branch of the
-  rule runs against real data — re-check it in the Rules Playground then.
+- **Four of the six committees have no manager.** Sponsorship and Development
+  were named on 10 Oct 2026; Cultural, Religious, Kitchen and Administrative
+  have nobody, so their members see only the events their own address appears
+  on. One chip each fixes it — the third chip state, *manages*.
+  The manager branch of the rule is **verified** as of that day, both
+  directions and both keys of the map: a manager was allowed on an event of
+  their committee that does not name them (nothing else in the rule can allow
+  that) and denied on an event of a committee they do not manage.
+  The other half of the same problem is `participants`, which is still sparse
+  — the seed carries 141 assignee names and no addresses. **My work → Owner →
+  Unassigned** is where that gets fixed, two clicks per row.
 - **Rolling the rules back** is `git checkout <previous> -- firestore.rules`
   and `firebase deploy --only firestore:rules`. The client is safe either way,
   because asking for less than you may have is always allowed. Clearing
