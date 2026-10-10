@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { nextStatus, events as seedEvents, deriveStatus, DEFAULT_COMMITTEE } from './data/events.js'
 import { participantsOf } from './data/assignees.js'
+import { scopeFor, visibleEvents, EVERYTHING } from './lib/access.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
 import { isFirebaseConfigured } from './lib/firebaseConfig.js'
 import {
@@ -95,6 +96,29 @@ export default function App() {
   const isAdmin = canManageCommittee(user, activeRoster)
   // Cloud mode means edits are shared and Firestore is authoritative.
   const cloud = isFirebaseConfigured && allowed
+
+  /**
+   * What this person may see.
+   *
+   * EVERYTHING outside cloud mode on purpose, and it is not a hole: the local
+   * checkout has no Firestore to scope, and a signed-out visitor is already
+   * served NO_OVERRIDES below, so all either of them can reach is the seed
+   * calendar that ships in the bundle anyway.
+   *
+   * The raw roster entry, not the trimmed one from toMembers — that one drops
+   * the role and the committee map, which is all this needs.
+   */
+  const myMember = useMemo(() => {
+    const mine = String(user?.email ?? '').trim().toLowerCase()
+    if (!mine) return null
+    return (activeRoster?.members ?? []).find((m) => String(m.email ?? '').toLowerCase() === mine) ?? null
+  }, [activeRoster, user])
+  const scope = useMemo(
+    () => (cloud ? scopeFor({ email: user?.email, member: myMember, isAdmin }) : EVERYTHING),
+    [cloud, user, myMember, isAdmin]
+  )
+  // Objects are new every render, so the subscription keys off the value.
+  const scopeKey = JSON.stringify(scope)
   // Editing requires being on the committee list. The one exception is a local
   // checkout with no Firebase config, where there is no sign-in to gate on.
   const editable = !isFirebaseConfigured || allowed
@@ -152,13 +176,15 @@ export default function App() {
   useEffect(() => {
     if (!cloud) return
     let unsub = () => {}
-    watchOverrides(setOverrides, (err) =>
-      showToast(`Could not reach the database: ${err.message}`),
+    watchOverrides(
+      setOverrides,
+      (err) => showToast(`Could not reach the database: ${err.message}`),
+      JSON.parse(scopeKey),
     ).then((fn) => {
       unsub = fn
     })
     return () => unsub()
-  }, [cloud, showToast])
+  }, [cloud, showToast, scopeKey])
 
   // Only the unconfigured local checkout persists to this browser. A deployed
   // build never does — see the note on the overrides state above.
@@ -203,10 +229,17 @@ export default function App() {
   // rather than cleared in an effect, so there is no frame where it is visible.
   const visibleOverrides = isFirebaseConfigured && !cloud ? NO_OVERRIDES : overrides
 
-  const events = applyOverrides(seedEvents, visibleOverrides).map((e) => ({
-    ...e,
-    status: deriveStatus(e.date, e.endDate, now),
-  }))
+  // Narrowed twice, deliberately. The query above decides which saved records
+  // arrive; this decides which events are shown, because the fifteen seeded
+  // ones ship in the bundle and would otherwise appear stripped of the edits
+  // their record carries — which reads as data loss rather than as access.
+  const events = visibleEvents(
+    applyOverrides(seedEvents, visibleOverrides).map((e) => ({
+      ...e,
+      status: deriveStatus(e.date, e.endDate, now),
+    })),
+    scope
+  )
   /**
    * Saved records with no committee written on them.
    *

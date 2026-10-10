@@ -164,21 +164,56 @@ export async function signOutUser() {
  * 130-milestone checklist would push a combined document toward Firestore's
  * 1MB limit.
  */
-export async function watchOverrides(onChange, onError) {
+export async function watchOverrides(onChange, onError, scope = { kind: 'all' }) {
   const fb = await getFirebase()
   if (!fb) return () => {}
-  const { collection, onSnapshot } = fb.store
-  return onSnapshot(
-    collection(fb.db, 'eventOverrides'),
-    (snap) => {
-      const overrides = {}
-      snap.forEach((doc) => {
-        overrides[doc.id] = doc.data()
-      })
-      onChange(overrides)
-    },
-    onError
+  const { collection, onSnapshot, query, where } = fb.store
+  const ref = collection(fb.db, 'eventOverrides')
+
+  if (scope.kind === 'none') {
+    onChange({})
+    return () => {}
+  }
+
+  /**
+   * Two subscriptions, merged, rather than one query with an OR.
+   *
+   * The client has to ask only for what it may have. Security rules cannot
+   * filter a query: if the rules deny one document in a collection read, the
+   * whole read fails rather than returning the rest — so an unfiltered fetch
+   * plus strict rules is not a narrower app, it is a broken one.
+   *
+   * It is two queries because the two tests are on different fields, and a
+   * single query mixing `in` with `array-contains` would need a composite
+   * index per committee set. Two subscriptions need no index at all and are
+   * predictable: each rebuilds its own half, and the halves are merged by id,
+   * so a document leaving one of them cannot linger.
+   */
+  const queries =
+    scope.kind === 'all'
+      ? [ref]
+      : [
+          // Firestore rejects an empty `in` list, and a volunteer manages none.
+          scope.manages.length ? query(ref, where('committee', 'in', scope.manages)) : null,
+          query(ref, where('participants', 'array-contains', scope.email)),
+        ].filter(Boolean)
+
+  const parts = queries.map(() => ({}))
+  const unsubs = queries.map((q, i) =>
+    onSnapshot(
+      q,
+      (snap) => {
+        const next = {}
+        snap.forEach((doc) => {
+          next[doc.id] = doc.data()
+        })
+        parts[i] = next
+        onChange(Object.assign({}, ...parts))
+      },
+      onError
+    )
   )
+  return () => unsubs.forEach((stop) => stop())
 }
 
 /**

@@ -217,6 +217,26 @@ accident:
   `PeopleField` replaced `PersonField` wherever work can be shared.
   `PersonField` deliberately stays for the event lead, a sponsor's Temple POC
   and a run-of-show slot: those are one person by nature.
+- **Who may see an event** — `src/lib/access.js`, one function the calendar
+  and the query both call so they cannot disagree. Three sources, first match
+  wins: **admin** everything; **manager** every event of a committee they run;
+  **participant** the events they personally have work on, in any committee. A
+  volunteer is a member who manages nothing, so they fall through to the third
+  test and see only what is theirs — row-level scoping with no extra
+  machinery. Covered by `src/lib/access.test.mjs`.
+  It narrows **twice**, deliberately. `watchOverrides` runs up to two
+  subscriptions (`committee in manages`, `participants array-contains me`) and
+  merges them by id, so only permitted records arrive; then the calendar is
+  filtered too, because the fifteen seeded events ship in the bundle and would
+  otherwise appear stripped of the edits their record carries, which reads as
+  data loss rather than as access.
+  Two subscriptions rather than one `or()`: the tests are on different fields,
+  so a single query would need a composite index per committee set, and each
+  half rebuilding separately means a document leaving one cannot linger.
+  Scope is `EVERYTHING` outside cloud mode, which is not a hole — the local
+  checkout has no Firestore, and a signed-out visitor is already served
+  `NO_OVERRIDES`, so either way all they reach is the seed calendar that ships
+  in the bundle anyway.
 - **Who may reach an event** — `participants`, an array of lower-cased
   addresses on each `eventOverrides` document, written by `participantsOf()`
   in `src/data/assignees.js` and recomputed in `handleEventChange` on every
@@ -393,7 +413,16 @@ addresses are in the logs — search `Reminder send failed`.
    demoted, and then their real tags are gone. Anything that edits a record
    reads `storedCommitteesOf` / `storedRoleOf`; anything that *asks a question
    about access* reads `committeeIdsOf` / `committeeRoleOf`.
-18. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
+18. **"Rules before client" is backwards when the client narrows its own
+   query.** The usual advice assumes the client asks for everything and the
+   rules hide the rest. Here the client asks for less. Tighten the rules
+   first and the old unfiltered read — one `collection()` with no `where` —
+   fails *entirely* for every non-admin, because a denied document fails the
+   whole query rather than being skipped. That is not a narrower app, it is an
+   outage. **Client first, under permissive rules** (it asks for less than it
+   may have, which is safe and visible), then rules. Until the rules land,
+   nothing is actually enforced: the UI is narrower, the API is not.
+19. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
    Now one Firestore document. What remains in source is the permanent owner
    `utahindiacc@gmail.com` — hardcoded in both rule files so the committee can
    never lock itself out — and a pre-roster fallback.
