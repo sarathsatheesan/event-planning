@@ -253,6 +253,22 @@ accident:
   from the roster picker — the same act that makes the weekly reminder reach
   anyone. The admin button on **My work** seeds the field on records that
   predate it; after that it maintains itself.
+- **Who manages which committee** — `managers` on `config/committee`, a map
+  of committee id to the addresses that run it, written by `managerListsOf()`
+  in `src/lib/committee.js` on every roster save. **The security rules are the
+  only reader.** They cannot work it out for themselves: `members` is a list of
+  maps and the rules language has no way to search a list for the entry
+  matching the signed-in address. So the same fact is written twice, by one
+  save, and `committee.test.mjs` asserts the two agree — for every non-admin,
+  the committees the client will query are exactly the committees that list
+  them. A disagreement here does not degrade, it fails the whole query.
+  Admins are deliberately absent: the rules allow them everything by a
+  separate test, and listing them would mean re-saving every admin row for
+  each committee added later.
+  **Its presence is the switch.** While the key is absent the rules narrow
+  nothing, so the rules deploy on its own changes nothing and the narrowing
+  starts when an admin saves the roster — which is also when the editor starts
+  refusing a member with no committee.
 - **Wrap-up follow-ups** — `event.retro.actions[]`, shape
   `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
@@ -420,12 +436,30 @@ addresses are in the logs — search `Reminder send failed`.
    fails *entirely* for every non-admin, because a denied document fails the
    whole query rather than being skipped. That is not a narrower app, it is an
    outage. **Client first, under permissive rules** (it asks for less than it
-   may have, which is safe and visible), then rules. Until the rules land,
-   nothing is actually enforced: the UI is narrower, the API is not.
+   may have, which is safe and visible), then rules. The client shipped
+   10 Oct 2026; the rules the same day but behind the `managers` key, so
+   nothing is enforced until an admin saves the roster once.
 19. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
    Now one Firestore document. What remains in source is the permanent owner
    `utahindiacc@gmail.com` — hardcoded in both rule files so the committee can
    never lock itself out — and a pre-roster fallback.
+20. **Ten document access calls per request, and no promise of caching.** The
+   limit is 10 for a single-document or query request, 20 across a transaction
+   or batch, and the documentation says only that *some* calls *may* be cached.
+   The old helpers each fetch `config/committee` for themselves, so
+   `isAdmin() || isCommittee() || …` on one read could cost six or eight.
+   `mayReadEvent()` therefore takes the roster **as an argument** — the `get()`
+   happens once, in the `allow read` line — so the whole decision costs one.
+   Keep the self-fetching helpers off that path.
+21. **A rules deploy cannot be verified by looking at the app.** The client
+   narrows its own subscription, so the screen looks right whether or not the
+   rules are doing anything. The only honest check is to go around the app:
+   read the ID token out of the `firebaseLocalStorageDb` IndexedDB store and
+   hit the Firestore REST API directly as a manager and as a volunteer — the
+   whole collection must come back **403**, the two scoped queries must come
+   back 200, and a document outside the scope must be 403. That script is
+   `scripts/leak-test.js` — paste it into the console on the live site — and it
+   is the gate, not the calendar rendering fewer cards.
 
 ## How this codebase gets tested
 
@@ -499,10 +533,19 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   reading them so records written before today keep working.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.
-- **What an untagged member means, once committees are enforced.** Today a
-  member with no `committees` behaves exactly as before, which is correct while
-  nothing is hidden. When scoping ships, untagged has to mean either "sees
-  everything" (fails open) or "sees nothing" (locks them out). The intended fix
-  is a validation rule in `CommitteeDialog`, the same shape as the existing
-  "keep at least one admin" guard: refuse to save a member with no committee.
-  Not added yet, deliberately — it would block tagging people gradually.
+- **Turn committee scoping on, and prove it.** Everything is written and
+  deployed; what is left is three steps in order, and the last one is the gate.
+  1. `firebase deploy --only firestore:rules`. Harmless on its own — no
+     `managers` key yet, so nothing narrows.
+  2. An admin opens **Committee** and saves once. This writes `managers` and
+     turns scoping on, and the dialog will now refuse the save until every
+     non-admin has at least one committee. That refusal is the point: untagged
+     would otherwise have to mean either everything or nothing.
+  3. Run `scripts/leak-test.js` in the browser console signed in as a manager
+     **and** as a volunteer, and check the two doors it cannot reach: a PDF export holds
+     nothing outside the scope, and Preview Monday lists only that person's own
+     rows. Until this is done, treat the rules as untested.
+
+  Rolling back is `git checkout <previous> -- firestore.rules` and the same
+  deploy; the client is safe either way, because asking for less than you may
+  have is always allowed.

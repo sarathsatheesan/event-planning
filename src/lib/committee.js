@@ -98,6 +98,39 @@ export function storedRoleOf(member, committeeId) {
   return null
 }
 
+/**
+ * Who manages each committee: { cultural: ['a@x', 'b@y'] }.
+ *
+ * The security rules need this and cannot derive it. `members` is a list of
+ * maps and the rules language has no way to search a list for the entry
+ * matching the signed-in address, so the roster carries a second view of the
+ * same fact, written by the same save that writes `members`. Nothing in the
+ * app reads it — the client works from the member's own row — which is exactly
+ * why it is built here, beside the readers it has to agree with.
+ *
+ * Admins are left out on purpose. The rules allow them everything by a
+ * separate test, and listing them here would mean every admin's row had to be
+ * re-saved for each committee added later. Built from the stored readers, not
+ * the derived ones, for the same reason: this file has twice been the place
+ * where the admin rule leaked into stored data.
+ */
+export function managerListsOf(members) {
+  const out = {}
+  for (const m of members ?? []) {
+    const email = String(m?.email ?? '')
+      .trim()
+      .toLowerCase()
+    if (!email || m?.role === 'admin') continue
+    for (const id of storedCommitteesOf(m)) {
+      if (storedRoleOf(m, id) !== 'manager') continue
+      if (!out[id]) out[id] = []
+      if (!out[id].includes(email)) out[id].push(email)
+    }
+  }
+  for (const id of Object.keys(out)) out[id].sort()
+  return out
+}
+
 export function storedCommitteesOf(member) {
   const raw = member?.committees
   if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'string' && id)

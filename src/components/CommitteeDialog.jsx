@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FALLBACK_COMMITTEE, BOOTSTRAP_ADMINS } from '../lib/firebaseConfig.js'
 import { COMMITTEES } from '../data/events.js'
-import { storedCommitteesOf, storedRoleOf } from '../lib/committee.js'
+import { storedCommitteesOf, storedRoleOf, managerListsOf } from '../lib/committee.js'
 
 /**
  * Who can edit, managed in the app.
@@ -133,6 +133,21 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
       setError('Keep at least one admin, or nobody can change this list again.')
       return
     }
+    // Once reads are scoped by committee, a member with no committee has no
+    // answer: either they see everything, which makes the scoping pointless,
+    // or they see nothing, which looks like a broken app. So the roster is not
+    // allowed to hold one. Admins are exempt — they are in every committee by
+    // definition.
+    const bare = filled.filter(
+      (m) => m.role !== 'admin' && Object.keys(m.committees ?? {}).length === 0
+    )
+    if (bare.length) {
+      setError(
+        `Give ${bare.map((m) => m.name.trim() || m.email.trim()).join(', ')} ` +
+          `at least one committee — a member with none would see nothing.`
+      )
+      return
+    }
 
     onSave({
       emails,
@@ -146,6 +161,12 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
         role: m.role,
         committees: m.committees ?? {},
       })),
+      // The one thing in here the rules read that the app does not: a list of
+      // maps cannot be searched from a rule, so who manages what is written
+      // out a second time in a shape a rule can test. Saving is what turns
+      // committee-scoped reads on — until this key exists the rules narrow
+      // nothing, which is what makes the rules deploy itself harmless.
+      managers: managerListsOf(filled),
     })
   }
 

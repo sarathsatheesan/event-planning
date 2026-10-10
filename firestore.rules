@@ -72,11 +72,64 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Who manages which committee: committee id to the addresses that run it,
+    // written by the roster editor alongside `members`.
+    //
+    // The rules language cannot work this out for itself. `members` is a list
+    // of maps and there is no way to search a list for the entry matching the
+    // signed-in address, so the roster carries this second view of the same
+    // fact. Both are written by the same save, which is what keeps them from
+    // drifting apart. Admins are deliberately absent: they are allowed
+    // everything by a separate test, and listing them here would mean every
+    // admin's row had to be re-saved for each committee added later.
+    //
+    // Absent entirely until an admin saves the roster once after committee
+    // scoping ships, and while it is absent nothing is narrowed. That is on
+    // purpose: deploying these rules on its own changes nothing, so the deploy
+    // cannot be the thing that breaks somebody's calendar, and the narrowing
+    // begins at a moment an admin chooses. It is also the moment the editor
+    // starts refusing a member with no committee — before that, untagged would
+    // have to mean either everything or nothing.
+    //
+    // Takes the roster document as an argument rather than fetching it, so the
+    // whole decision costs one document access call. There is a hard limit of
+    // ten per request and no promise that repeated reads of the same document
+    // are cached, so the helpers that fetch for themselves are kept away from
+    // this path.
+    function mayReadEvent(snap, committee, participants) {
+      return snap == null
+        ? email() in fallbackEmails()
+        : (email() in snap.data.admins || (
+            email() in snap.data.emails && (
+              !('managers' in snap.data) ||
+              (committee in snap.data.managers && email() in snap.data.managers[committee]) ||
+              email() in participants
+            )
+          ));
+    }
+
     match /eventOverrides/{eventId} {
-      // Signing in is required to read as well as write. Swap this line for
-      // `allow read: if true;` only if the committee decides the calendar
-      // should be publicly viewable.
-      allow read: if isCommittee();
+      // Signing in is required to read as well as write.
+      //
+      // Reads are scoped to the committees a person runs plus the events they
+      // personally have work on. Writes are not scoped: anyone on the
+      // committee may still edit anything they can reach, which is how the
+      // committee has always worked, and on a create there is no document to
+      // test against anyway.
+      //
+      // What a denied document does to a query matters here: it fails the
+      // whole read, not only itself. So the client narrows its own
+      // subscription first — see watchOverrides in src/lib/firebase.js — and
+      // this rule shipped after that, not before. Tightening this first would
+      // have emptied every non-admin's calendar rather than narrowing it.
+      allow read: if email() != '' && (
+        email() in bootstrapAdmins() ||
+        mayReadEvent(
+          get(/databases/$(database)/documents/config/committee),
+          'committee' in resource.data ? resource.data.committee : '',
+          'participants' in resource.data ? resource.data.participants : []
+        )
+      );
       allow write: if isCommittee();
     }
 
