@@ -3,6 +3,7 @@ import { ORGS, statusTone, readiness, COMMITTEES, DEFAULT_COMMITTEE } from '../d
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EditableDate from './EditableDate.jsx'
+import { moveStart, moveEnd } from '../lib/schedule.js'
 import { PersonField, InlineSelect, InlineField, NumberField } from './fields.jsx'
 import ExportDialog from './ExportDialog.jsx'
 import EventArt from './EventArt.jsx'
@@ -120,7 +121,14 @@ export default function EventDetail({
               endDate={event.endDate}
               startTime={event.startTime}
               original={originalDate}
-              onChange={(date) => onChange({ date })}
+              onChange={(date) => {
+                const patch = moveStart(event, date)
+                if (patch) onChange(patch)
+              }}
+              onEndChange={(endDate) => {
+                const patch = moveEnd(event, endDate)
+                if (patch) onChange(patch)
+              }}
               onTimeChange={(startTime) => onChange({ startTime })}
               onReset={onReset}
             />
