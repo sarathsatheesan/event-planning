@@ -274,6 +274,16 @@ accident:
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and
   My Work pull these from **every** event including completed ones, unlike
   milestones — a follow-up outlives its event.
+- **When an event happens** — `date`, and `endDate` for a multi-day run
+  (null otherwise). `src/lib/schedule.js` owns every change to the pair.
+  Moving the start **carries the end with it**: rescheduling a two-day
+  tournament gives you a different weekend, not a thirty-day tournament.
+  Changing the length is the separate act of editing the end, and an end on or
+  before the start clears the field rather than storing a backwards range —
+  which is also how a multi-day event is turned back into a single-day one.
+  All dates are parsed at **local midnight** here and everywhere else in this
+  codebase; a `toISOString()` anywhere near them shifts an evening in Utah to
+  the next day and every span with it. Covered by `src/lib/schedule.test.mjs`.
 - **Edits made from My work** — `src/lib/work.js`. A row there has been lifted
   out of its event, so changing one means finding its way back into the right
   array: `checklist` for a milestone, `retro.actions` for a follow-up.
@@ -474,6 +484,14 @@ addresses are in the logs — search `Reminder send failed`.
    `/eventOverrides/<id>`, turn on Authenticated and set **both** `email` and
    `email_verified` — the rule reads `email_verified`, so leaving it unticked
    denies everything for the wrong reason and looks like a broken rule.
+23. **A status can be derived from a field nothing could edit.**
+   `deriveStatus` takes the finish line from `endDate ?? date`, and for months
+   only `date` was editable — the end was rendered as plain text. Push a
+   two-day event to a later weekend and it kept the old finish, so an event
+   starting next month and ending last month showed as **Completed** on its own
+   card. The symptom looked like a status bug and was a missing control. Worth
+   the general form: when a derived value reads two fields, check that both can
+   be edited, or the derivation will be blamed for the gap.
 22. **A dialog seeded once from a live document will clobber whoever saved
    while it was open.** `CommitteeDialog` reads the roster into local state at
    mount; the roster itself is watched live. Two admins open it, one saves, the
