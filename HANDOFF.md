@@ -492,8 +492,11 @@ addresses are in the logs — search `Reminder send failed`.
    found its own height and the page read as three different kinds of thing.
    Adding a line to a tile means adding it to the budget, or the uniformity
    quietly goes. Nothing is reserved for content that may not arrive, which is
-   why the card is short: the event description lives on the event page now,
-   not clamped to two lines on the tile.
+   why the card is 238px rather than the 342 it started at: the event
+   description (`heroNote`) was removed from the seed, the blueprint and the
+   app, and the readiness ring sits on the artwork rather than on a row of its
+   own — a whole line of height for one number, and the source of the gap
+   between the status, the title and the date.
    `src/index.css` owns the hover and press states under `.event-tile`, in one
    place rather than a dozen utility classes, because three surfaces move
    together and have to agree on timing.
