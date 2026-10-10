@@ -121,9 +121,16 @@ export function AddButton({ onClick, children }) {
  * blank line, which is fine in a labelled row and useless in a column of five
  * identical boxes on a phone.
  */
+/**
+ * `options` takes plain strings, or { value, label } when what is stored is not
+ * what should be read — a committee is stored as `cultural` and shown as
+ * Cultural. Read-only renders the label, never the stored id.
+ */
 export function InlineSelect({ value, onChange, options, className = '', ariaLabel, placeholder }) {
   const editable = useEditable()
-  if (!editable) return <ReadOnly value={value} placeholder={placeholder} className={className} />
+  const opts = options.map((o) => (typeof o === 'string' ? { value: o, label: o } : o))
+  const shown = opts.find((o) => o.value === value)?.label ?? value
+  if (!editable) return <ReadOnly value={shown} placeholder={placeholder} className={className} />
   return (
     <select
       value={value}
@@ -131,9 +138,9 @@ export function InlineSelect({ value, onChange, options, className = '', ariaLab
       onChange={(e) => onChange(e.target.value)}
       className={`focus-ring rounded-md border border-border-soft bg-transparent px-1 py-0.5 transition hover:border-border focus:border-accent focus:bg-surface ${className}`}
     >
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o === '' && placeholder ? placeholder : o}
+      {opts.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.value === '' && placeholder ? placeholder : o.label}
         </option>
       ))}
     </select>

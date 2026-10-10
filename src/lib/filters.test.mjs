@@ -1,5 +1,5 @@
 // Run with: node src/lib/filters.test.mjs
-import { filterEvents, yearsIn, orgsIn, statusesIn, activeCount, EMPTY_FILTERS, ALL } from './filters.js'
+import { filterEvents, yearsIn, orgsIn, committeesIn, statusesIn, activeCount, EMPTY_FILTERS, ALL } from './filters.js'
 import { events as seedEvents, deriveStatus } from '../data/events.js'
 import { applyOverrides } from '../data/storage.js'
 import { isPaid } from '../data/sponsors.js'
@@ -41,6 +41,26 @@ check('an event created before the field reads as ICC', legacy.find((e) => e.id 
 // A real Temple event must not be rewritten by the backfill.
 const temple = applyOverrides(seedEvents, { 'evt-t': { name: 'Temple Annadanam', date: '2027-04-01', org: 'Temple' } })
 check('an explicit Temple value survives', temple.find((e) => e.id === 'evt-t').org, 'Temple')
+
+console.log('\n--- the committee backfill ---')
+// The same promise org makes, for the field the governance work rests on: the
+// cultural committee runs most of the calendar, so every record that predates
+// the field reads as theirs with nothing to run.
+check('every seed event has a committee', materialised.every((e) => e.committee), true)
+check('and all of them are cultural', [...new Set(materialised.map((e) => e.committee))].join(), 'cultural')
+check('an old override reads as cultural', legacy.find((e) => e.id === 'india-mela').committee, 'cultural')
+check('an event created before the field does too', legacy.find((e) => e.id === 'evt-old').committee, 'cultural')
+const religious = applyOverrides(seedEvents, {
+  'evt-r': { name: 'Diwali Pooja', date: '2027-10-20', org: 'Temple', committee: 'religious' },
+})
+check('an explicit committee survives', religious.find((e) => e.id === 'evt-r').committee, 'religious')
+// Committee and org are separate axes, and this is the case that proves it:
+// the kitchen cooks at an ICC event.
+const crossed = applyOverrides(seedEvents, {
+  'evt-k': { name: 'Mela food prep', date: '2027-06-01', org: 'ICC', committee: 'kitchen' },
+})
+const k = crossed.find((e) => e.id === 'evt-k')
+check('an ICC event can belong to the kitchen', [k.org, k.committee], ['ICC', 'kitchen'])
 
 console.log('\n--- the sponsors backfill ---')
 // Same shape of promise as org: a record written before the field existed
@@ -139,6 +159,27 @@ check(
   filterEvents(derived, { ...EMPTY_FILTERS, status: 'Completed' }).length > 0,
   true
 )
+
+console.log('\n--- filtering by committee ---')
+const mixed = [
+  ev({ id: 'c1', name: 'Navratri Concert', org: 'ICC', committee: 'cultural' }),
+  ev({ id: 'r1', name: 'Diwali Pooja', org: 'Temple', committee: 'religious' }),
+  ev({ id: 'k1', name: 'Mela food prep', org: 'ICC', committee: 'kitchen' }),
+]
+check('all committees by default', only(mixed, {}), ['Navratri Concert', 'Diwali Pooja', 'Mela food prep'])
+check('narrowed to one committee', only(mixed, { committee: 'religious' }), ['Diwali Pooja'])
+// The point of two axes: ICC alone keeps two events, ICC + kitchen keeps one.
+check('org alone', only(mixed, { org: 'ICC' }), ['Navratri Concert', 'Mela food prep'])
+check('org and committee together', only(mixed, { org: 'ICC', committee: 'kitchen' }), ['Mela food prep'])
+check('a committee nobody runs matches nothing', only(mixed, { committee: 'development' }), [])
+check('the options offered come from the data', committeesIn(mixed), ['cultural', 'religious', 'kitchen'])
+check(
+  'and follow the known order when given one',
+  committeesIn(mixed, ['cultural', 'religious', 'kitchen', 'sponsorship']),
+  ['cultural', 'religious', 'kitchen']
+)
+check('committee counts toward the active badge', activeCount({ ...EMPTY_FILTERS, committee: 'kitchen' }), 1)
+check('and ALL does not', activeCount({ ...EMPTY_FILTERS, committee: ALL }), 0)
 
 console.log(fails === 0 ? '\nALL PASS' : `\n${fails} FAILURES`)
 process.exit(fails === 0 ? 0 : 1)

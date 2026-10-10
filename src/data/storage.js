@@ -5,7 +5,7 @@
 // edit made here is NOT shared with teammates and does not travel to another
 // machine. When a real data layer lands, this module is the seam to replace.
 
-import { DEFAULT_ORG } from './events.js'
+import { DEFAULT_ORG, DEFAULT_COMMITTEE } from './events.js'
 import { sponsorProspects } from './sponsors.js'
 
 const KEY = 'eventops.overrides.v1'
@@ -62,6 +62,10 @@ export function applyOverrides(events, overrides) {
   return [...edited, ...created].map((event) => ({
     ...event,
     org: event.org ?? DEFAULT_ORG,
+    // Same trick as the org backfill above, and for the same reason: the
+    // cultural committee runs most of the calendar, so every record that
+    // predates the field reads as theirs from the moment this ships.
+    committee: event.committee ?? DEFAULT_COMMITTEE,
     foodVendors: event.foodVendors ?? [],
     businessVendors: event.businessVendors ?? [],
     // The prospect list, not an empty one: the 77 businesses are the ICC's,

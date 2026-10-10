@@ -6,7 +6,7 @@
 
 export const ALL = 'all'
 
-export const EMPTY_FILTERS = { q: '', year: ALL, org: ALL, status: ALL }
+export const EMPTY_FILTERS = { q: '', year: ALL, org: ALL, committee: ALL, status: ALL }
 
 /** Both ends, because a New Year's event can start in one year and end in the next. */
 function yearsOf(event) {
@@ -29,6 +29,20 @@ export function orgsIn(events, known = []) {
   return [...found].sort()
 }
 
+/**
+ * Committee answers who runs the event; org answers whose event it is. They do
+ * not line up — the kitchen cooks at both ICC and temple events — so this is a
+ * second axis beside the org filter, never a third org. Built from the data
+ * plus the known list, exactly like orgsIn, so a committee nobody runs yet is
+ * never offered.
+ */
+export function committeesIn(events, known = []) {
+  const found = new Set()
+  for (const event of events) if (event.committee) found.add(event.committee)
+  const order = known.length ? known : [...found]
+  return order.filter((id) => found.has(id))
+}
+
 export function statusesIn(events) {
   // Fixed order, not alphabetical: this is the life of an event, and a list
   // reading Completed → Live Today → Planning would make nobody faster.
@@ -38,11 +52,12 @@ export function statusesIn(events) {
 }
 
 export function matches(event, filters) {
-  const { q, year, org, status } = { ...EMPTY_FILTERS, ...filters }
+  const { q, year, org, committee, status } = { ...EMPTY_FILTERS, ...filters }
   const needle = q.trim().toLowerCase()
   if (needle && !(event.name ?? '').toLowerCase().includes(needle)) return false
   if (year !== ALL && !yearsOf(event).has(year)) return false
   if (org !== ALL && (event.org ?? '') !== org) return false
+  if (committee !== ALL && (event.committee ?? '') !== committee) return false
   if (status !== ALL && event.status !== status) return false
   return true
 }
@@ -54,5 +69,7 @@ export function filterEvents(events, filters) {
 /** How many filters are narrowing the list — drives the badge on mobile. */
 export function activeCount(filters) {
   const f = { ...EMPTY_FILTERS, ...filters }
-  return [f.q.trim() !== '', f.year !== ALL, f.org !== ALL, f.status !== ALL].filter(Boolean).length
+  return [f.q.trim() !== '', f.year !== ALL, f.org !== ALL, f.committee !== ALL, f.status !== ALL].filter(
+    Boolean
+  ).length
 }

@@ -74,6 +74,15 @@ accident:
   in `applyOverrides`; there is no migration script and none is needed. To add a
   third organisation, add it to `ORGS` — the filter builds itself from the data
   plus that list.
+- **Committee** — every event has one (`COMMITTEES` in `src/data/events.js`,
+  ids lower-case and stable, labels shown). Records without the field read as
+  `cultural` through the same default in `applyOverrides` that backfills org,
+  so there is nothing to run. Editable in the event header beside org, chosen
+  when an event is created, and inherited when a previous event is used as a
+  template. **Committee is not a second org**: org answers whose event it is,
+  committee answers who runs it, and they cross — the kitchen cooks at both ICC
+  and temple events. `filters.js` treats them as two independent axes and
+  `filters.test.mjs` has the case that proves it.
 - **Events** — `src/data/events.js` is immutable seed. Edits layer on top as
   `eventOverrides/{eventId}` in Firestore. An override whose id is *not* in the
   seed and that carries a name and date **is** a user-created event; see
@@ -316,7 +325,12 @@ addresses are in the logs — search `Reminder send failed`.
    npm run build` there — the repo is public, so the clone needs no credential.
    Do not run `npm install` in the mounted folder: it would replace the Mac's
    binaries with Linux ones and break the build on the laptop.
-16. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
+16. **`filters.test.mjs` ends in `process.exit`, so anything appended after it
+   never runs.** Symptom: a new block of checks prints nothing and the suite
+   still says ALL PASS — the worst kind of green, because it looks like
+   coverage. New checks go *above* the two summary lines at the bottom. Worth
+   reading the output and counting, not just trusting the exit code.
+17. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
    Now one Firestore document. What remains in source is the permanent owner
    `utahindiacc@gmail.com` — hardcoded in both rule files so the committee can
    never lock itself out — and a pre-roster fallback.

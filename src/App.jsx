@@ -213,10 +213,10 @@ export default function App() {
    * A created event is stored exactly like an edit, under an id that is not in
    * the seed list. See applyOverrides for why that is one mechanism and not two.
    */
-  function handleCreateEvent({ name, date, sourceId, org }) {
+  function handleCreateEvent({ name, date, sourceId, org, committee }) {
     const source = sourceId ? events.find((e) => e.id === sourceId) : null
     const id = newEventId()
-    const record = buildEvent({ name, date, source, org })
+    const record = buildEvent({ name, date, source, org, committee })
     setOverrides((prev) => {
       if (cloud) queueWrite(id, record)
       return { ...prev, [id]: record }

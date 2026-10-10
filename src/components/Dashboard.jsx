@@ -1,4 +1,4 @@
-import { statusTone, readiness, formatDateRange, ORGS } from '../data/events.js'
+import { statusTone, readiness, formatDateRange, ORGS, COMMITTEES } from '../data/events.js'
 import { formatTime } from '../lib/records.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
@@ -87,6 +87,7 @@ export default function Dashboard({
           filters={filters}
           onChange={onFiltersChange}
           knownOrgs={ORGS}
+          knownCommittees={COMMITTEES}
         />
         <p className="w-full text-xs text-ink-soft sm:w-auto">
           {narrowed

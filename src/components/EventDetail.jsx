@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ORGS, statusTone, readiness } from '../data/events.js'
+import { ORGS, statusTone, readiness, COMMITTEES, DEFAULT_COMMITTEE } from '../data/events.js'
 import StatusPill from './StatusPill.jsx'
 import ReadinessGauge from './ReadinessGauge.jsx'
 import EditableDate from './EditableDate.jsx'
@@ -52,6 +52,8 @@ function tabsFor(event, editable) {
   if (event.needsBusinessVendors) lead.push({ key: 'business', label: 'Business Vendors' })
   return [...lead, ...TABS]
 }
+
+const COMMITTEE_OPTIONS = COMMITTEES.map((c) => ({ value: c.id, label: c.name }))
 
 export default function EventDetail({
   event,
@@ -139,6 +141,14 @@ export default function EventDetail({
               onChange={(v) => onChange({ org: v })}
               options={ORGS}
               ariaLabel="Which organisation runs this event"
+              className="text-sm text-ink-soft"
+            />
+            <span aria-hidden="true">·</span>
+            <InlineSelect
+              value={event.committee ?? DEFAULT_COMMITTEE}
+              onChange={(v) => onChange({ committee: v })}
+              options={COMMITTEE_OPTIONS}
+              ariaLabel="Which committee runs this event"
               className="text-sm text-ink-soft"
             />
             <span aria-hidden="true">·</span>

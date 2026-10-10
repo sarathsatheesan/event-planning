@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ALL, activeCount, yearsIn, orgsIn, statusesIn } from '../lib/filters.js'
+import { ALL, activeCount, yearsIn, orgsIn, committeesIn, statusesIn } from '../lib/filters.js'
 
 /**
  * The calendar's filters.
@@ -17,11 +17,22 @@ import { ALL, activeCount, yearsIn, orgsIn, statusesIn } from '../lib/filters.js
 const CONTROL =
   'focus-ring rounded-md border border-border bg-surface px-2 py-1 text-xs font-semibold text-ink'
 
-export default function EventFilters({ events, filters, onChange, knownOrgs = [] }) {
+export default function EventFilters({
+  events,
+  filters,
+  onChange,
+  knownOrgs = [],
+  knownCommittees = [],
+}) {
   const [open, setOpen] = useState(false)
   const active = activeCount(filters)
   const years = yearsIn(events)
   const orgs = orgsIn(events, knownOrgs)
+  const committees = committeesIn(
+    events,
+    knownCommittees.map((c) => c.id)
+  )
+  const committeeName = (id) => knownCommittees.find((c) => c.id === id)?.name ?? id
   const statuses = statusesIn(events)
 
   const set = (patch) => onChange({ ...filters, ...patch })
@@ -84,6 +95,27 @@ export default function EventFilters({ events, filters, onChange, knownOrgs = []
           ))}
         </div>
 
+        {/* Committee is a second axis beside org, not a third org: org is whose
+            event it is, committee is who runs it, and the kitchen cooks at
+            both. A select rather than buttons because six values would wrap
+            the row on a phone, where org's two do not. Hidden until more than
+            one committee actually runs something — one option is not a choice. */}
+        {committees.length > 1 && (
+          <select
+            value={filters.committee}
+            onChange={(e) => set({ committee: e.target.value })}
+            aria-label="Filter by committee"
+            className={CONTROL}
+          >
+            <option value={ALL}>All committees</option>
+            {committees.map((id) => (
+              <option key={id} value={id}>
+                {committeeName(id)}
+              </option>
+            ))}
+          </select>
+        )}
+
         <select
           value={filters.year}
           onChange={(e) => set({ year: e.target.value })}
@@ -115,7 +147,7 @@ export default function EventFilters({ events, filters, onChange, knownOrgs = []
         {active > 0 && (
           <button
             type="button"
-            onClick={() => onChange({ q: '', year: ALL, org: ALL, status: ALL })}
+            onClick={() => onChange({ q: '', year: ALL, org: ALL, committee: ALL, status: ALL })}
             className="focus-ring self-start rounded-md px-2 py-1 text-xs font-semibold text-ink-soft underline-offset-2 transition hover:text-ink hover:underline sm:self-auto"
           >
             Clear

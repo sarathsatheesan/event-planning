@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { describeSource } from '../data/blueprint.js'
-import { ORGS, DEFAULT_ORG } from '../data/events.js'
+import { ORGS, DEFAULT_ORG, COMMITTEES, DEFAULT_COMMITTEE } from '../data/events.js'
 
 /**
  * Create an event, optionally from a previous one.
@@ -29,6 +29,7 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
   const [date, setDate] = useState('')
   const [sourceId, setSourceId] = useState('')
   const [org, setOrg] = useState(DEFAULT_ORG)
+  const [committee, setCommittee] = useState(DEFAULT_COMMITTEE)
   const [error, setError] = useState(null)
 
   // Most recent first: last year's running of an event is the one worth copying.
@@ -56,7 +57,7 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
       setError('Pick the date it happens.')
       return
     }
-    onCreate({ name: trimmed, date, sourceId: sourceId || null, org })
+    onCreate({ name: trimmed, date, sourceId: sourceId || null, org, committee })
   }
 
   return (
@@ -106,6 +107,21 @@ export default function NewEventDialog({ events, onCreate, onClose }) {
               {ORGS.map((o) => (
                 <option key={o} value={o}>
                   {o}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className={LABEL}>Committee</span>
+            <select
+              value={committee}
+              onChange={(e) => setCommittee(e.target.value)}
+              className={FIELD}
+            >
+              {COMMITTEES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>
