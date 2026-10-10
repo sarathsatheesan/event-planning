@@ -49,7 +49,7 @@ export default function Dashboard({
       <header className="mb-8 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">
-            India Cultural Center of Utah
+            Sri Ganesha Hindu Temple of Utah
           </p>
           <h1 className="font-display text-4xl font-bold leading-[0.95] tracking-tight sm:text-5xl">
             Annual Event Operations Hub
@@ -114,27 +114,31 @@ export default function Dashboard({
       ) : (
       <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {/* Every tile is the same height because every slot inside it has a
-            fixed line budget — two lines of title, one of date, one of venue,
-            two of note — rather than because the row stretches them to match.
-            Fifteen events, some carrying a venue, a note and a lead and some
-            only a name and a date, used to produce three different card
-            heights down the page, which reads as three different kinds of
-            thing. */}
+            fixed line budget — two lines of title, one of date, one of venue
+            — rather than because the row stretches them to match. Fifteen
+            events, some carrying a venue and a lead and some only a name and a
+            date, used to produce three different card heights down the page,
+            which reads as three different kinds of thing.
+
+            Nothing here is reserved for content that may not arrive, which is
+            why the card is as short as it is: the description moved to the
+            event page, where there is room for all of it rather than the first
+            two lines, and a screen of events now fits more of them. */}
         {sorted.map((event) => {
           const pct = readiness(event)
           const tone = statusTone[event.status]
           return (
             <li key={event.id} className="h-full">
               <article className="event-tile group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface">
-                <EventArt theme={event.theme} className="event-tile__art h-14 w-full shrink-0" />
+                <EventArt theme={event.theme} className="event-tile__art h-12 w-full shrink-0" />
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event.id)}
-                  className="focus-ring relative z-10 flex flex-1 flex-col px-5 pb-4 pt-4 text-left"
+                  className="focus-ring relative z-10 flex flex-1 flex-col px-5 pb-3.5 pt-3.5 text-left"
                 >
-                  <div className="mb-3 flex h-12 items-start justify-between gap-3">
+                  <div className="mb-2.5 flex h-11 items-start justify-between gap-3">
                     <StatusPill label={event.status} tone={tone} pulse={tone === 'live'} />
-                    <ReadinessGauge percent={pct} size={46} stroke={4} />
+                    <ReadinessGauge percent={pct} size={42} stroke={4} />
                   </div>
                   <h3 className="line-clamp-2 min-h-[3.1rem] font-display text-xl font-bold leading-tight tracking-tight transition-colors duration-200 group-hover:text-accent">
                     {event.name}
@@ -152,9 +156,6 @@ export default function Dashboard({
                       the rhythm and says the same thing the event page says. */}
                   <p className="mt-2 truncate text-sm text-ink-soft">
                     {event.venue || <span className="italic opacity-70">Venue to be confirmed</span>}
-                  </p>
-                  <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm leading-snug text-ink-soft">
-                    {event.heroNote}
                   </p>
                 </button>
                 <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-soft bg-paper/50 px-5 py-2.5">

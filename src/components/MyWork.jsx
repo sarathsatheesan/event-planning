@@ -228,7 +228,7 @@ export default function MyWork({
       <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">
-            India Cultural Center of Utah
+            Sri Ganesha Hindu Temple of Utah
           </p>
           <h1 className="font-display text-3xl font-bold leading-[0.95] tracking-tight sm:text-4xl">My work</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">

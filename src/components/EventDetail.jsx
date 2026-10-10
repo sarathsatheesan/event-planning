@@ -134,6 +134,13 @@ export default function EventDetail({
             />
           </div>
           <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">{event.name}</h1>
+          {/* The one-line description used to live on the calendar tile, where
+              it was clamped to two lines and forced every card to reserve the
+              space whether it had one or not. Here it is read in full, beside
+              the event it describes. */}
+          {event.heroNote && (
+            <p className="mt-1.5 max-w-2xl text-sm leading-snug text-ink-soft">{event.heroNote}</p>
+          )}
           {/* Real events arrive with gaps. Rather than hiding what is missing,
               every field is an input with a placeholder naming what belongs there. */}
           <div className="mt-1 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-ink-soft">

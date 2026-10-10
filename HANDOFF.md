@@ -486,14 +486,23 @@ addresses are in the logs — search `Reminder send failed`.
    denies everything for the wrong reason and looks like a broken rule.
 24. **The calendar's uniform card height is a markup discipline, not a CSS
    trick.** Every slot in an event tile has a fixed line budget — two lines of
-   title, one of date, one of venue, two of note — set with `line-clamp-N` and
-   a matching `min-h`. That is what makes fifteen cards of wildly uneven
-   content the same height; the grid only stretches cards within a row, so
-   without it each row found its own height and the page read as three
-   different kinds of thing. Adding a line to a tile means adding it to the
-   budget, or the uniformity quietly goes. `src/index.css` owns the hover and
-   press states under `.event-tile`, in one place rather than a dozen utility
-   classes, because three surfaces move together and they have to agree.
+   title, one of date, one of venue — set with `line-clamp-N` and a matching
+   `min-h`. That is what makes fifteen cards of uneven content the same height;
+   a CSS grid only stretches cards **within** a row, so without it each row
+   found its own height and the page read as three different kinds of thing.
+   Adding a line to a tile means adding it to the budget, or the uniformity
+   quietly goes. Nothing is reserved for content that may not arrive, which is
+   why the card is short: the event description lives on the event page now,
+   not clamped to two lines on the tile.
+   `src/index.css` owns the hover and press states under `.event-tile`, in one
+   place rather than a dozen utility classes, because three surfaces move
+   together and have to agree on timing.
+25. **`:hover` sticks on a touch screen.** A phone has no pointer to withdraw,
+   so a tapped card stays lit until something else is tapped — on iOS and
+   Android both. Every hover rule for the tiles sits inside
+   `@media (hover: hover) and (pointer: fine)`; touch gets `:active` instead,
+   which is the honest feedback anyway. Anything tactile added later wants the
+   same treatment.
 23. **A status can be derived from a field nothing could edit.**
    `deriveStatus` takes the finish line from `endDate ?? date`, and for months
    only `date` was editable — the end was rendered as plain text. Push a
@@ -547,6 +556,37 @@ Rendering the digest email to an image caught a missing charset declaration that
 would have shipped `Â·` to every recipient. Look at output, do not just assert on it.
 
 ---
+
+## Which browsers this has to work in
+
+**The floor is Safari 16.4 / Chrome and Edge 111 / Android Chrome 111 /
+Firefox 128** — March 2023 and later. That is not a choice made in this
+codebase: **Tailwind v4** emits `color-mix()` for every opacity modifier
+(`bg-paper/50`) and `@property` for its internal variables, 44 and 34 times
+respectively in the built stylesheet, and a browser that cannot parse those
+drops the declarations rather than approximating them. Vendor JavaScript sits
+inside the same line — `structuredClone` and `findLast` in the PDF chunk are
+Safari 15.4, regex lookbehind in the Firebase chunk is Safari 16.4.
+
+Nothing hand-written adds a newer requirement, and that is worth keeping:
+`src/index.css` uses literal `--tile-edge` / `--tile-wash` / `--tile-ring`
+tokens rather than mixing them from `--accent`, so the card interaction is not
+the first thing to break if the baseline is ever revisited. No `:has()`, no
+`@container`, no `oklch()`, no `field-sizing`.
+
+Checked in Chromium, including a phone viewport with a coarse pointer, dark
+mode, and reduced motion. **WebKit and Gecko could not be run here** — the
+container cannot reach the Playwright browser CDN — so Safari and Firefox are
+covered by reading rather than by running, which is worth saying plainly
+before anyone treats a green run as full coverage. Two known Safari-specific
+behaviours, both deliberate: `<datalist>` gives no typeahead on iOS, so the
+event search degrades to a plain text box; and `text-wrap: balance` is
+ignored before Safari 17.5, which only changes where headings wrap.
+
+`index.html` carries `<meta name="color-scheme" content="light dark">`.
+Without it the native controls — the date and time pickers, the selects, the
+scrollbars — stay light while the page is dark, which on Safari means dark
+text on a dark field.
 
 ## Open items
 

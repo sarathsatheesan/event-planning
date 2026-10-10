@@ -393,7 +393,7 @@ export function buildDigest({
 <body style="margin:0;background:#f3f4f7;padding:24px 12px">
   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #dde0e7;border-radius:12px">
     <tr><td style="padding:20px 22px">
-      <div style="font:700 11px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2f5fed">India Cultural Center of Utah</div>
+      <div style="font:700 11px system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2f5fed">Sri Ganesha Hindu Temple of Utah</div>
       <div style="font:700 20px system-ui,sans-serif;color:#12151c;padding-top:2px">${heading}</div>
       ${greeting}
       <table role="presentation" cellpadding="0" cellspacing="0" width="100%">

@@ -3,12 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Native controls — the date and time pickers, the selects, the
+         scrollbars — are painted by the browser, not by this stylesheet.
+         Without this they stay light while the rest of the page goes dark,
+         which on Safari means dark text on a dark field. -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f3f4f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#10131a" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta
       name="description"
       content="EventOps — master calendar, pre-event checklists, a live Day-Of command center, vendor directory, and post-event wrap-up for recurring annual events."
     />
-    <title>EventOps — India Cultural Center of Utah</title>
+    <title>EventOps — Sri Ganesha Hindu Temple of Utah</title>
   </head>
   <body>
     <div id="root"></div>

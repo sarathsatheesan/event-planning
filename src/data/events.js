@@ -1,4 +1,4 @@
-// India Cultural Center of Utah — EventOps
+// Sri Ganesha Hindu Temple of Utah — EventOps
 //
 // The annual community events calendar. Events whose date has passed roll into
 // their next cycle here (2027); events still ahead keep their 2026 dates.
