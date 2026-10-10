@@ -107,6 +107,9 @@ accident:
   it. Rows saved before roles existed are a plain **array** of ids and read
   back as volunteers, the lesser of the two, which is the safe way round for a
   field that decides what somebody can see. Nothing needs migrating.
+  An admin row shows one line rather than six locked chips: an admin manages
+  all six by definition, so chips there would be controls nobody can use, each
+  repeating what one sentence says better. They reappear on demotion.
   **Manager exists so that running a committee does not require being an
   admin.** Before it, the only way to let somebody organise Kitchen was to
   make them an admin, which also hands them the roster and every other

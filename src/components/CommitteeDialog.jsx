@@ -228,37 +228,41 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
                   <span className="mr-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-soft">
                     Committees
                   </span>
-                  {COMMITTEES.map((c) => {
-                    const held = m.role === 'admin' ? 'manager' : (m.committees ?? {})[c.id]
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => cycleCommittee(i, c.id)}
-                        aria-pressed={Boolean(held)}
-                        disabled={m.role === 'admin'}
-                        title={
-                          held === 'manager'
-                            ? `Runs ${c.name}`
-                            : held
-                              ? `In ${c.name} — click to make them manage it`
-                              : `Click to add to ${c.name}`
-                        }
-                        className={`focus-ring rounded-full border px-2 py-0.5 text-[11px] font-semibold transition disabled:cursor-not-allowed ${
-                          held
-                            ? 'border-accent bg-accent text-accent-ink'
-                            : 'border-border text-ink-soft hover:text-ink'
-                        }`}
-                      >
-                        {c.name}
-                        {held === 'manager' && <span className="font-normal"> · manages</span>}
-                      </button>
-                    )
-                  })}
-                  {m.role === 'admin' && (
-                    <span className="text-[10px] text-ink-soft">
-                      admins manage every committee
+                  {/* An admin manages all six by definition, so chips here
+                      would be six controls nobody can use, each repeating a
+                      fact one sentence states better. The chips come back the
+                      moment they are made a member again. */}
+                  {m.role === 'admin' ? (
+                    <span className="text-[11px] text-ink-soft">
+                      All six — an admin manages every committee.
                     </span>
+                  ) : (
+                    COMMITTEES.map((c) => {
+                      const held = (m.committees ?? {})[c.id]
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => cycleCommittee(i, c.id)}
+                          aria-pressed={Boolean(held)}
+                          title={
+                            held === 'manager'
+                              ? `Runs ${c.name} — click to remove`
+                              : held
+                                ? `In ${c.name} — click again to make them run it`
+                                : `Click to add to ${c.name}`
+                          }
+                          className={`focus-ring rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
+                            held
+                              ? 'border-accent bg-accent text-accent-ink'
+                              : 'border-border text-ink-soft hover:text-ink'
+                          }`}
+                        >
+                          {c.name}
+                          {held === 'manager' && <span className="font-normal"> · manages</span>}
+                        </button>
+                      )
+                    })
                   )}
                 </div>
               </li>
