@@ -61,6 +61,43 @@ export function committeeIdsOf(member) {
  * locked from `committeeIdsOf`, but what gets saved is still what they picked,
  * ready for the day they are made an ordinary member again.
  */
+/**
+ * What this person is to one committee: 'manager', 'volunteer', or null.
+ *
+ * Manager runs the committee's work; volunteer does the part given to them.
+ * An admin manages all of them, which is the whole point of the distinction —
+ * before it existed, the only way to let someone run their own committee was
+ * to make them an admin, and an admin can also rewrite the roster and read
+ * every other committee's work.
+ *
+ * The older array shape carries no role, so it reads as volunteer: the lesser
+ * of the two, which is the safe direction for a field that decides what
+ * somebody can see.
+ */
+export function committeeRoleOf(member, committeeId) {
+  if (member?.role === 'admin') return 'manager'
+  return storedRoleOf(member, committeeId)
+}
+
+/**
+ * The role actually written on this member, admin rule not applied.
+ *
+ * The roster editor seeds its rows from here, for the same reason it seeds
+ * ids from storedCommitteesOf: reading the derived role would quietly rewrite
+ * an admin's own volunteer committees as manager and save them that way, and
+ * the mistake would only show the day somebody is demoted.
+ */
+export function storedRoleOf(member, committeeId) {
+  const raw = member?.committees
+  if (Array.isArray(raw)) return raw.includes(committeeId) ? 'volunteer' : null
+  if (raw && typeof raw === 'object') {
+    const value = raw[committeeId]
+    if (!value) return null
+    return value === 'manager' ? 'manager' : 'volunteer'
+  }
+  return null
+}
+
 export function storedCommitteesOf(member) {
   const raw = member?.committees
   if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'string' && id)

@@ -101,11 +101,21 @@ accident:
 - **Committee roster** — `config/committee` in Firestore: `emails`, `admins`
   (flat lower-case lists the security rules read) and `members` (for the UI).
   Managed in-app via the **Committee** button. No longer in source.
-  Each `members[]` entry now also carries `committees` — an array of ids from
-  `COMMITTEES` in `src/data/events.js`, set by an admin with the chips on each
-  member row. Read it with `committeeIdsOf()` in `src/lib/committee.js`, which
-  accepts both an array and a map so a later move to per-committee roles
-  (`{ kitchen: 'manager' }`) is not a migration. **Nothing filters on it yet**:
+  Each `members[]` entry also carries `committees`, a map of committee id to
+  role — `{ cultural: 'manager', kitchen: 'volunteer' }` — set by an admin
+  with the chips on each member row, which cycle: not in it, in it, manages
+  it. Rows saved before roles existed are a plain **array** of ids and read
+  back as volunteers, the lesser of the two, which is the safe way round for a
+  field that decides what somebody can see. Nothing needs migrating.
+  **Manager exists so that running a committee does not require being an
+  admin.** Before it, the only way to let somebody organise Kitchen was to
+  make them an admin, which also hands them the roster and every other
+  committee's work — which is why nine of sixteen members were admins.
+  Four readers in `src/lib/committee.js`, and the split matters:
+  `committeeIdsOf` / `committeeRoleOf` answer *what is this person to that
+  committee* and apply the admin rule; `storedCommitteesOf` / `storedRoleOf`
+  answer *what is written down* and do not. Covered by
+  `src/lib/committee.test.mjs`. **Nothing filters on it yet**:
   an untagged member behaves exactly as they did before, which is what makes it
   safe to fill the list in over weeks. `emails` and `admins` are untouched by
   this — they are the two lists the security rules read, so a committee tag can
@@ -356,7 +366,15 @@ addresses are in the logs — search `Reminder send failed`.
    still says ALL PASS — the worst kind of green, because it looks like
    coverage. New checks go *above* the two summary lines at the bottom. Worth
    reading the output and counting, not just trusting the exit code.
-17. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
+17. **An editor that reads a derived value saves the derived value.** Bitten
+   twice, the same way both times: seeding the roster dialog from
+   `committeeIdsOf` gave every admin all six committees and would have written
+   them back; seeding the role from `committeeRoleOf` turned an admin's own
+   volunteer committees into manager. Neither is visible until somebody is
+   demoted, and then their real tags are gone. Anything that edits a record
+   reads `storedCommitteesOf` / `storedRoleOf`; anything that *asks a question
+   about access* reads `committeeIdsOf` / `committeeRoleOf`.
+18. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
    Now one Firestore document. What remains in source is the permanent owner
    `utahindiacc@gmail.com` — hardcoded in both rule files so the committee can
    never lock itself out — and a pre-roster fallback.

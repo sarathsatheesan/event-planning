@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node src/lib/filters.test.mjs && node src/lib/menu.test.mjs && node src/lib/menuImport.test.mjs"
+    "test": "node src/lib/filters.test.mjs && node src/lib/committee.test.mjs && node src/lib/menu.test.mjs && node src/lib/menuImport.test.mjs"
   },
   "dependencies": {
     "firebase": "^12.18.0",

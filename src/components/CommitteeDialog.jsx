@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FALLBACK_COMMITTEE, BOOTSTRAP_ADMINS } from '../lib/firebaseConfig.js'
 import { COMMITTEES } from '../data/events.js'
-import { storedCommitteesOf } from '../lib/committee.js'
+import { storedCommitteesOf, storedRoleOf } from '../lib/committee.js'
 
 /**
  * Who can edit, managed in the app.
@@ -13,9 +13,15 @@ import { storedCommitteesOf } from '../lib/committee.js'
  * Committees are assigned here too, one person at a time. Nobody has to be
  * tagged for the app to work: an untagged member behaves exactly as they did
  * before this existed, so the list can be filled in over weeks rather than in
- * one sitting. An admin is in every committee by definition — their chips show
- * on and locked, and their own selection is kept underneath, so demoting them
- * to member restores it rather than leaving them in all six.
+ * one sitting. Each committee carries a role: click a chip once to add someone,
+ * again to make them manage it, again to take it away. Manager exists so that
+ * running your own committee does not require being an admin — before it, the
+ * only way to let somebody organise Kitchen was to hand them the roster and
+ * every other committee's work with it.
+ *
+ * An admin manages every committee by definition — their chips show on and
+ * locked, and their own selection is kept underneath, so demoting them to
+ * member restores it rather than leaving them running all six.
  *
  * Two safeguards worth knowing. The permanent owners cannot be removed here —
  * the rules let them in regardless, so removing them would only make this
@@ -37,7 +43,11 @@ function seedFrom(roster) {
       email: m.email ?? '',
       name: m.name ?? '',
       role: m.role === 'admin' ? 'admin' : 'member',
-      committees: storedCommitteesOf(m),
+      // { cultural: 'manager' } from here on. Rows saved as a plain array read
+      // back as volunteers, which is the safe way round for an access field.
+      committees: Object.fromEntries(
+        storedCommitteesOf(m).map((id) => [id, storedRoleOf(m, id) ?? 'volunteer'])
+      ),
     }))
   }
   // No roster saved yet: show what the rules are currently honouring, so the
@@ -49,7 +59,7 @@ function seedFrom(roster) {
     role: (source.admins ?? []).map((e) => e.toLowerCase()).includes(email.toLowerCase())
       ? 'admin'
       : 'member',
-    committees: [],
+    committees: {},
   }))
 }
 
@@ -67,15 +77,31 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
     setMembers((list) => list.map((m, j) => (j === i ? { ...m, ...patch } : m)))
   }
 
-  /** One chip, on or off. Order follows COMMITTEES so the saved list is stable. */
-  function toggleCommittee(i, id) {
+  /**
+   * One chip, cycling: not in it -> volunteer -> manages it -> not in it.
+   *
+   * Three states on one control rather than a chip plus a role dropdown
+   * beside it: six committees already fill the row, and twelve controls per
+   * person would make the screen unreadable at exactly the moment it needs to
+   * be read carefully. The chip says "manages" when it means it, so the state
+   * is legible without hovering anything.
+   */
+  function cycleCommittee(i, id) {
     setMembers((list) =>
       list.map((m, j) => {
         if (j !== i) return m
-        const have = new Set(m.committees ?? [])
-        if (have.has(id)) have.delete(id)
-        else have.add(id)
-        return { ...m, committees: COMMITTEES.map((c) => c.id).filter((c) => have.has(c)) }
+        const next = { ...(m.committees ?? {}) }
+        if (!next[id]) next[id] = 'volunteer'
+        else if (next[id] === 'volunteer') next[id] = 'manager'
+        else delete next[id]
+        // Rebuilt in COMMITTEES order so the saved object does not reshuffle
+        // itself every time somebody is edited.
+        return {
+          ...m,
+          committees: Object.fromEntries(
+            COMMITTEES.map((c) => c.id).filter((c) => next[c]).map((c) => [c, next[c]])
+          ),
+        }
       })
     )
   }
@@ -84,7 +110,7 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
   const admins = filled.filter((m) => m.role === 'admin')
   // Admins are in every committee by definition, so they are never "untagged".
   const untagged = filled.filter(
-    (m) => m.role !== 'admin' && (m.committees ?? []).length === 0
+    (m) => m.role !== 'admin' && Object.keys(m.committees ?? {}).length === 0
   ).length
   const losingSelf =
     currentEmail &&
@@ -118,7 +144,7 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
         email: m.email.trim().toLowerCase(),
         name: m.name.trim(),
         role: m.role,
-        committees: m.committees ?? [],
+        committees: m.committees ?? {},
       })),
     })
   }
@@ -203,27 +229,35 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
                     Committees
                   </span>
                   {COMMITTEES.map((c) => {
-                    const on = m.role === 'admin' || (m.committees ?? []).includes(c.id)
+                    const held = m.role === 'admin' ? 'manager' : (m.committees ?? {})[c.id]
                     return (
                       <button
                         key={c.id}
                         type="button"
-                        onClick={() => toggleCommittee(i, c.id)}
-                        aria-pressed={on}
+                        onClick={() => cycleCommittee(i, c.id)}
+                        aria-pressed={Boolean(held)}
                         disabled={m.role === 'admin'}
+                        title={
+                          held === 'manager'
+                            ? `Runs ${c.name}`
+                            : held
+                              ? `In ${c.name} — click to make them manage it`
+                              : `Click to add to ${c.name}`
+                        }
                         className={`focus-ring rounded-full border px-2 py-0.5 text-[11px] font-semibold transition disabled:cursor-not-allowed ${
-                          on
+                          held
                             ? 'border-accent bg-accent text-accent-ink'
                             : 'border-border text-ink-soft hover:text-ink'
                         }`}
                       >
                         {c.name}
+                        {held === 'manager' && <span className="font-normal"> · manages</span>}
                       </button>
                     )
                   })}
                   {m.role === 'admin' && (
                     <span className="text-[10px] text-ink-soft">
-                      admins are in every committee
+                      admins manage every committee
                     </span>
                   )}
                 </div>
