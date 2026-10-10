@@ -23,6 +23,30 @@ import { melaBusinessVendors } from './businessVendors.js'
 export const ORGS = ['ICC', 'Temple']
 export const DEFAULT_ORG = 'ICC'
 
+/**
+ * Who does the work.
+ *
+ * Separate from ORGS deliberately: org answers whose event it is, committee
+ * answers who runs it, and the two do not line up — the kitchen cooks at both
+ * ICC and temple events, and a sponsorship push can belong to either. Ids are
+ * lower-case and stable; the label is the only part anyone sees, so it can be
+ * reworded without touching stored data.
+ *
+ * Nothing filters on this yet. It is here so the roster and the calendar agree
+ * on one spelling before either starts using it.
+ */
+export const COMMITTEES = [
+  { id: 'cultural', name: 'Cultural' },
+  { id: 'religious', name: 'Religious' },
+  { id: 'kitchen', name: 'Kitchen' },
+  { id: 'sponsorship', name: 'Sponsorship' },
+  { id: 'development', name: 'Development' },
+  { id: 'administrative', name: 'Administrative' },
+]
+
+/** Most ICC events are the cultural committee's, so that is the old world. */
+export const DEFAULT_COMMITTEE = 'cultural'
+
 /** The not-yet-planned shape shared by every event awaiting its details. */
 const shell = {
   // Every event that existed before this field did belongs to the ICC — the

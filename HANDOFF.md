@@ -1,6 +1,6 @@
 # EventOps — handoff
 
-India Cultural Center of Utah · last updated 7 October 2026 · `main`
+India Cultural Center of Utah · last updated 10 October 2026 · `main`
 
 <!-- No commit hash here on purpose: this file is edited in the same commit it
      would name, so any hash written above is wrong the moment it is committed.
@@ -81,6 +81,15 @@ accident:
 - **Committee roster** — `config/committee` in Firestore: `emails`, `admins`
   (flat lower-case lists the security rules read) and `members` (for the UI).
   Managed in-app via the **Committee** button. No longer in source.
+  Each `members[]` entry now also carries `committees` — an array of ids from
+  `COMMITTEES` in `src/data/events.js`, set by an admin with the chips on each
+  member row. Read it with `committeeIdsOf()` in `src/lib/committee.js`, which
+  accepts both an array and a map so a later move to per-committee roles
+  (`{ kitchen: 'manager' }`) is not a migration. **Nothing filters on it yet**:
+  an untagged member behaves exactly as they did before, which is what makes it
+  safe to fill the list in over weeks. `emails` and `admins` are untouched by
+  this — they are the two lists the security rules read, so a committee tag can
+  never cost anyone their access.
 - **Artist files** — Cloud Storage under `artistPosters/` and `artistBios/`.
 - **Food stalls** — `event.foodVendors[]`, each with a nested `menu[]`. Gated by
   `event.needsFoodStalls`, like artists. That same flag now also picks the
@@ -290,7 +299,24 @@ addresses are in the logs — search `Reminder send failed`.
    the PAT, or GitHub refuses the push.
 13. **Firebase Extensions shuts down 31 March 2027.** Do not adopt one. Mail is
    sent directly from the function with nodemailer for this reason.
-14. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
+14. **`functions/seed/` must carry every module `events.js` imports.**
+   Symptom: `cd functions && npm test` dies with `ERR_MODULE_NOT_FOUND` for
+   `functions/seed/melaFood.js`, and a deployed `weeklyDigest` would throw on
+   import for the same reason. `copy-seed.mjs` staged only `events.js`,
+   `template.js` and `storage.js`, but `events.js` imports `melaFood.js`,
+   `sponsors.js` and `businessVendors.js` — it has since the Food Stalls tab
+   landed. All six are listed now. If events.js ever imports something new,
+   add it there too, and run `npm test` in `functions/` to prove it.
+15. **`npm run build` cannot run through the device bridge.** Symptom:
+   `Cannot find native binding ... @rolldown/binding-linux-arm64-gnu`. The
+   `node_modules` in the repo was installed on macOS, and the bridge's shell is
+   a Linux VM, so the bundler's native binary is the wrong platform. `npm test`
+   is unaffected (pure Node). To verify a build from a session, clone the repo
+   in the cloud container, copy the changed files over, and `npm install &&
+   npm run build` there — the repo is public, so the clone needs no credential.
+   Do not run `npm install` in the mounted folder: it would replace the Mac's
+   binaries with Linux ones and break the build on the laptop.
+16. **Three allowlists used to exist** (config, Firestore rules, Storage rules).
    Now one Firestore document. What remains in source is the permanent owner
    `utahindiacc@gmail.com` — hardcoded in both rule files so the committee can
    never lock itself out — and a pre-roster fallback.
@@ -361,3 +387,10 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   is not kept.
 - **Per-organisation permissions.** Events carry an org (ICC / Temple) but
   access does not distinguish them: every committee member can edit both.
+- **What an untagged member means, once committees are enforced.** Today a
+  member with no `committees` behaves exactly as before, which is correct while
+  nothing is hidden. When scoping ships, untagged has to mean either "sees
+  everything" (fails open) or "sees nothing" (locks them out). The intended fix
+  is a validation rule in `CommitteeDialog`, the same shape as the existing
+  "keep at least one admin" guard: refuse to save a member with no committee.
+  Not added yet, deliberately — it would block tagging people gradually.

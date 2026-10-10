@@ -30,3 +30,20 @@ export function toMembers(roster) {
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }
+
+/**
+ * Which committees a member belongs to, as a list of ids.
+ *
+ * Tolerant of two shapes on purpose. Today the dialog saves an array, which is
+ * what Firestore's array-contains can query. If per-committee roles arrive
+ * later they will want a map ({ kitchen: 'manager' }), and a reader that
+ * already accepts both means that change does not have to be a migration.
+ * Anything else — absent, null, a stray string — reads as no committees, which
+ * is the correct answer for everyone until an admin says otherwise.
+ */
+export function committeeIdsOf(member) {
+  const raw = member?.committees
+  if (Array.isArray(raw)) return raw.filter((id) => typeof id === 'string' && id)
+  if (raw && typeof raw === 'object') return Object.keys(raw).filter((id) => raw[id])
+  return []
+}

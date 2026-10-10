@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FALLBACK_COMMITTEE, BOOTSTRAP_ADMINS } from '../lib/firebaseConfig.js'
+import { COMMITTEES } from '../data/events.js'
+import { committeeIdsOf } from '../lib/committee.js'
 
 /**
  * Who can edit, managed in the app.
@@ -7,6 +9,11 @@ import { FALLBACK_COMMITTEE, BOOTSTRAP_ADMINS } from '../lib/firebaseConfig.js'
  * This list used to live in three source files and took two deploys and a push
  * to change. It is now one Firestore document that the security rules read, so
  * adding an organiser is an administrative act rather than a developer task.
+ *
+ * Committees are assigned here too, one person at a time. Nobody has to be
+ * tagged for the app to work: an untagged member behaves exactly as they did
+ * before this existed, so the list can be filled in over weeks rather than in
+ * one sitting.
  *
  * Two safeguards worth knowing. The permanent owners cannot be removed here —
  * the rules let them in regardless, so removing them would only make this
@@ -28,6 +35,7 @@ function seedFrom(roster) {
       email: m.email ?? '',
       name: m.name ?? '',
       role: m.role === 'admin' ? 'admin' : 'member',
+      committees: committeeIdsOf(m),
     }))
   }
   // No roster saved yet: show what the rules are currently honouring, so the
@@ -39,6 +47,7 @@ function seedFrom(roster) {
     role: (source.admins ?? []).map((e) => e.toLowerCase()).includes(email.toLowerCase())
       ? 'admin'
       : 'member',
+    committees: [],
   }))
 }
 
@@ -56,8 +65,22 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
     setMembers((list) => list.map((m, j) => (j === i ? { ...m, ...patch } : m)))
   }
 
+  /** One chip, on or off. Order follows COMMITTEES so the saved list is stable. */
+  function toggleCommittee(i, id) {
+    setMembers((list) =>
+      list.map((m, j) => {
+        if (j !== i) return m
+        const have = new Set(m.committees ?? [])
+        if (have.has(id)) have.delete(id)
+        else have.add(id)
+        return { ...m, committees: COMMITTEES.map((c) => c.id).filter((c) => have.has(c)) }
+      })
+    )
+  }
+
   const filled = members.filter((m) => m.email.trim())
   const admins = filled.filter((m) => m.role === 'admin')
+  const untagged = filled.filter((m) => (m.committees ?? []).length === 0).length
   const losingSelf =
     currentEmail &&
     !filled.some((m) => m.email.trim().toLowerCase() === currentEmail.toLowerCase())
@@ -83,10 +106,14 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
     onSave({
       emails,
       admins: admins.map((m) => m.email.trim().toLowerCase()),
+      // emails and admins keep their exact shape: the security rules read those
+      // two lists and nothing else, so a committee tag can never cost anyone
+      // their access.
       members: filled.map((m) => ({
         email: m.email.trim().toLowerCase(),
         name: m.name.trim(),
         role: m.role,
+        committees: m.committees ?? [],
       })),
     })
   }
@@ -107,7 +134,8 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
         <h2 className="font-display text-lg font-bold text-ink">Committee</h2>
         <p className="mt-1 text-sm text-ink-soft">
           Everyone listed here can edit events. Admins can also change this list. Sign-in is by
-          Google or an emailed link — the address has to match exactly.
+          Google or an emailed link — the address has to match exactly. Committees are a label for
+          now — tag people as you go, nothing is hidden from anyone yet.
         </p>
 
         <ul className="mt-4 flex flex-col gap-1.5">
@@ -162,6 +190,32 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
                     <span className="sr-only">Remove {m.email || `member ${i + 1}`}</span>
                   </button>
                 )}
+
+                {/* Committees sit on their own line: six chips will not fit
+                    beside the address, the name and the role on a phone. */}
+                <div className="flex w-full flex-wrap items-center gap-1.5 border-t border-border-soft pt-2">
+                  <span className="mr-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-soft">
+                    Committees
+                  </span>
+                  {COMMITTEES.map((c) => {
+                    const on = (m.committees ?? []).includes(c.id)
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => toggleCommittee(i, c.id)}
+                        aria-pressed={on}
+                        className={`focus-ring rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
+                          on
+                            ? 'border-accent bg-accent text-accent-ink'
+                            : 'border-border text-ink-soft hover:text-ink'
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    )
+                  })}
+                </div>
               </li>
             )
           })}
@@ -169,7 +223,9 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
 
         <button
           type="button"
-          onClick={() => setMembers((list) => [...list, { email: '', name: '', role: 'member' }])}
+          onClick={() =>
+            setMembers((list) => [...list, { email: '', name: '', role: 'member', committees: [] }])
+          }
           className={`${MINI} mt-2`}
         >
           + Add member
@@ -187,6 +243,7 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
           <p className="text-xs text-ink-soft">
             {filled.length} member{filled.length === 1 ? '' : 's'} · {admins.length} admin
             {admins.length === 1 ? '' : 's'}
+            {untagged > 0 && ` · ${untagged} without a committee`}
           </p>
           <div className="flex gap-2">
             <button
