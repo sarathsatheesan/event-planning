@@ -83,6 +83,17 @@ accident:
   committee answers who runs it, and they cross — the kitchen cooks at both ICC
   and temple events. `filters.js` treats them as two independent axes and
   `filters.test.mjs` has the case that proves it.
+  The read-time default is enough while the client fetches every event and
+  sorts them out locally. It stops being enough the moment a query filters on
+  the field, because a query matches what is **stored** and an absent field
+  matches nothing — those events would silently not come back. **My work** has
+  an admin-only *Tag N untagged events* button that writes the committee each
+  event already displays; it appears only while something needs it and removes
+  itself afterwards. It goes through `handleEventChange` like any other edit,
+  because `saveOverride` replaces the whole document and the only safe way to
+  add one field is to send back the record it was merged into. It touches
+  override documents that already exist and does not create any: an event with
+  no saved edits has nothing for such a query to lose.
 - **Events** — `src/data/events.js` is immutable seed. Edits layer on top as
   `eventOverrides/{eventId}` in Firestore. An override whose id is *not* in the
   seed and that carries a name and date **is** a user-created event; see

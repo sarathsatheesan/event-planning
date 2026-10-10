@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { nextStatus, events as seedEvents, deriveStatus } from './data/events.js'
+import { nextStatus, events as seedEvents, deriveStatus, DEFAULT_COMMITTEE } from './data/events.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
 import { isFirebaseConfigured } from './lib/firebaseConfig.js'
 import {
@@ -206,6 +206,43 @@ export default function App() {
     ...e,
     status: deriveStatus(e.date, e.endDate, now),
   }))
+  /**
+   * Saved records with no committee written on them.
+   *
+   * Nothing looks wrong today: applyOverrides fills the field in as it reads,
+   * so these events show as Cultural like any other. The gap only bites when
+   * something asks the database for "my committees' events" instead of asking
+   * for all of them and sorting it out here — a query matches what is stored,
+   * and an absent field matches nothing, so these would quietly not come back.
+   *
+   * Only records that already exist are counted. An event with no saved edits
+   * has nothing to lose from such a query, so creating a document for it
+   * purely to hold a committee would be inventing work and inventing rows.
+   */
+  const untaggedIds = useMemo(
+    () => Object.keys(visibleOverrides).filter((id) => visibleOverrides[id] && !visibleOverrides[id].committee),
+    [visibleOverrides]
+  )
+
+  /**
+   * Writes the committee each event is already displayed as.
+   *
+   * Goes through handleEventChange like every other edit rather than touching
+   * Firestore directly: saveOverride replaces the whole document, so the only
+   * safe way to add one field is to send back the record it was merged into.
+   * Nothing visible changes — the point is to make the stored data say what
+   * the screen has been saying all along.
+   */
+  function handleTagUntagged() {
+    const ids = untaggedIds
+    if (!ids.length) return
+    for (const id of ids) {
+      const shown = events.find((e) => e.id === id)
+      handleEventChange(id, { committee: shown?.committee ?? DEFAULT_COMMITTEE })
+    }
+    showToast(`Tagged ${ids.length} event${ids.length === 1 ? '' : 's'} with the committee already shown.`)
+  }
+
   const selectedEvent = events.find((e) => e.id === selectedId) ?? null
   const selectedSeed = seedEvents.find((e) => e.id === selectedId) ?? null
 
@@ -422,6 +459,8 @@ export default function App() {
             onViewChange={setView}
             onEmailCommittee={isAdmin ? () => setSendingDigest(true) : null}
             onPreviewReminders={isAdmin ? () => setPreviewing(true) : null}
+            onTagUntagged={isAdmin && untaggedIds.length ? handleTagUntagged : null}
+            untaggedCount={untaggedIds.length}
             onStatusChange={handleWorkStatusChange}
           />
         ) : (

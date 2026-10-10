@@ -98,6 +98,8 @@ export default function MyWork({
   onViewChange,
   onEmailCommittee,
   onPreviewReminders,
+  onTagUntagged,
+  untaggedCount = 0,
   onStatusChange,
 }) {
   const editable = useEditable()
@@ -230,6 +232,19 @@ export default function MyWork({
               function re-checks the caller regardless of this button. */}
           {/* Reads live data and sends nothing — the function behind it has no
               mail password bound at all. */}
+          {/* Appears only while there is something to do, and takes itself
+              away once there is not — a one-off tidy-up does not deserve a
+              permanent button, and a button reading "(0)" is just furniture. */}
+          {onTagUntagged && (
+            <button
+              type="button"
+              onClick={onTagUntagged}
+              title="Writes the committee each event already shows, so a committee filter can find them"
+              className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
+            >
+              Tag {untaggedCount} untagged event{untaggedCount === 1 ? '' : 's'}
+            </button>
+          )}
           {onPreviewReminders && (
             <button
               type="button"
