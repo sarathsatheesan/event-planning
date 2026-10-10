@@ -474,6 +474,18 @@ addresses are in the logs — search `Reminder send failed`.
    `/eventOverrides/<id>`, turn on Authenticated and set **both** `email` and
    `email_verified` — the rule reads `email_verified`, so leaving it unticked
    denies everything for the wrong reason and looks like a broken rule.
+22. **A dialog seeded once from a live document will clobber whoever saved
+   while it was open.** `CommitteeDialog` reads the roster into local state at
+   mount; the roster itself is watched live. Two admins open it, one saves, the
+   other saves — and the first one's change is gone, with no error anywhere,
+   because the second save is a whole-document `setDoc` of a list that was read
+   before theirs existed. The dialog now compares the incoming roster against
+   what it was seeded from: an untouched form reseeds silently, a form with
+   work on it stops saving and offers to load theirs. The comparison has to be
+   **canonical** — committee tags are an object, and the same tags in a
+   different key order would otherwise read as somebody else's edit — and it
+   has to be skipped while `busy`, because our own write arrives back through
+   the same subscription.
 
 ## How this codebase gets tested
 

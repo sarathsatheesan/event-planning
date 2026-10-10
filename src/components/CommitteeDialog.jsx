@@ -63,15 +63,98 @@ function seedFrom(roster) {
   }))
 }
 
+/**
+ * A stable fingerprint of the rows on screen, for two questions that both have
+ * to be answered by comparison rather than by a flag: has anything been typed
+ * here, and has the stored roster moved underneath us.
+ *
+ * Canonical rather than a plain JSON.stringify — committee tags are an object,
+ * and two objects holding the same tags in a different key order are the same
+ * roster. Without the sort, a snapshot echoing our own data back would read as
+ * somebody else's edit.
+ */
+function rowsKey(rows) {
+  return JSON.stringify(
+    (rows ?? []).map((m) => [
+      (m.email ?? '').trim().toLowerCase(),
+      (m.name ?? '').trim(),
+      m.role,
+      Object.entries(m.committees ?? {})
+        .filter(([, v]) => v)
+        .sort(([a], [b]) => a.localeCompare(b)),
+    ])
+  )
+}
+
 export default function CommitteeDialog({ roster, currentEmail, busy, onSave, onClose }) {
   const [members, setMembers] = useState(() => seedFrom(roster))
   const [error, setError] = useState(null)
+  // The roster this form was seeded from. Everything else is a comparison
+  // against it: rows that differ are unsaved work, and a stored roster that
+  // differs is somebody else's save arriving while this was open.
+  const [base, setBase] = useState(() => rowsKey(seedFrom(roster)))
+  const [stale, setStale] = useState(false)
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false)
+
+  const dirty = rowsKey(members) !== base
+
+  /**
+   * Closing with unsaved work asks first.
+   *
+   * There are three ways out of here — Escape, the backdrop, Cancel — and all
+   * three used to drop the form without a word. The chips update the moment
+   * they are clicked, which makes the screen look saved, and the Save button
+   * is below sixteen members. Somebody tags two people, clicks away to check
+   * something, and the work is gone with nothing to suggest it ever happened.
+   */
+  function requestClose() {
+    if (busy) return
+    if (!dirty) {
+      onClose()
+      return
+    }
+    setError(null)
+    setConfirmingDiscard(true)
+  }
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && !busy && onClose()
+    const onKey = (e) => e.key === 'Escape' && requestClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, busy])
+  })
+
+  /**
+   * Another admin saving while this is open.
+   *
+   * The roster is watched live, so their save arrives here as a new `roster`.
+   * The form, though, was seeded once at open: saving now would write this
+   * screen's idea of the list over theirs, and whoever they added would simply
+   * be gone. Nothing merges two rosters safely — the same row can be edited
+   * both sides — so an untouched form quietly takes theirs, and a form with
+   * work on it says so and stops saving until somebody decides.
+   *
+   * Skipped while busy, because our own write comes back through the same
+   * subscription and must not read as a stranger's.
+   */
+  useEffect(() => {
+    if (busy || !roster) return
+    const theirs = rowsKey(seedFrom(roster))
+    if (theirs === base) return
+    if (!dirty) {
+      setMembers(seedFrom(roster))
+      setBase(theirs)
+      return
+    }
+    setStale(true)
+  }, [roster, busy, base, dirty])
+
+  function takeTheirs() {
+    setMembers(seedFrom(roster))
+    setBase(rowsKey(seedFrom(roster)))
+    setStale(false)
+    setConfirmingDiscard(false)
+    setError(null)
+  }
 
   function setRow(i, patch) {
     setMembers((list) => list.map((m, j) => (j === i ? { ...m, ...patch } : m)))
@@ -118,6 +201,12 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
 
   function handleSubmit(e) {
     e.preventDefault()
+    if (stale) {
+      // Short on purpose: the banner above already explains it, and the same
+      // sentence twice on one screen reads as two different problems.
+      setError('Not saved — load their version first.')
+      return
+    }
     const emails = filled.map((m) => m.email.trim().toLowerCase())
 
     const malformed = emails.find((e2) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e2))
@@ -173,7 +262,7 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/40 px-4 py-8"
-      onClick={() => !busy && onClose()}
+      onClick={requestClose}
     >
       <form
         role="dialog"
@@ -312,6 +401,25 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
             screen, after saving.
           </p>
         )}
+        {stale && (
+          <p className="mt-3 rounded-md border border-warning/50 bg-warning-soft/40 px-2.5 py-2 text-xs font-medium text-warning">
+            Somebody else changed this list while it was open. Saving now would undo their change,
+            so it is blocked until you decide.{' '}
+            <button
+              type="button"
+              onClick={takeTheirs}
+              className="focus-ring rounded font-semibold underline underline-offset-2"
+            >
+              Load their version
+            </button>{' '}
+            — what you have typed here is dropped.
+          </p>
+        )}
+        {confirmingDiscard && (
+          <p className="mt-3 text-xs font-medium text-warning">
+            Close without saving? The changes on this screen have not been written down anywhere.
+          </p>
+        )}
         {error && <p className="mt-3 text-xs font-medium text-critical">{error}</p>}
 
         <div className="mt-5 flex items-center justify-between gap-3">
@@ -319,16 +427,38 @@ export default function CommitteeDialog({ roster, currentEmail, busy, onSave, on
             {filled.length} member{filled.length === 1 ? '' : 's'} · {admins.length} admin
             {admins.length === 1 ? '' : 's'}
             {untagged > 0 && ` · ${untagged} without a committee`}
+            {dirty && ' · unsaved'}
           </p>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={busy}
-              className="focus-ring rounded-md border border-border px-3 py-1.5 text-sm font-semibold text-ink-soft transition hover:text-ink disabled:opacity-50"
-            >
-              Cancel
-            </button>
+            {confirmingDiscard ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDiscard(false)}
+                  disabled={busy}
+                  className="focus-ring rounded-md border border-border px-3 py-1.5 text-sm font-semibold text-ink-soft transition hover:text-ink disabled:opacity-50"
+                >
+                  Keep editing
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={busy}
+                  className="focus-ring rounded-md border border-critical px-3 py-1.5 text-sm font-semibold text-critical transition disabled:opacity-50"
+                >
+                  Discard changes
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={requestClose}
+                disabled={busy}
+                className="focus-ring rounded-md border border-border px-3 py-1.5 text-sm font-semibold text-ink-soft transition hover:text-ink disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="submit"
               disabled={busy}
