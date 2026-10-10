@@ -161,6 +161,77 @@ h1, h2, h3, .font-display {
   }
 }
 
+/* ---- Event tile ----------------------------------------------------------
+   The calendar is fifteen cards of wildly uneven content — some have a venue,
+   a note and a lead, some have a name and a date. The uniform height comes
+   from the markup, where every slot is given a fixed line budget; what lives
+   here is the part that has to be one definition rather than a dozen utility
+   classes: how a tile answers a pointer.
+
+   Three surfaces move together on hover — the card lifts, the border takes on
+   the accent, and the art strip warms and grows just enough to register. The
+   press is the opposite gesture, down and smaller, so a click feels like a
+   button rather than a link. The whole thing is flattened by the
+   reduced-motion block below, which is why it is transitions rather than a
+   hand-rolled animation. */
+.event-tile {
+  position: relative;
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.05);
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    box-shadow 220ms ease,
+    border-color 220ms ease;
+}
+
+/* The colour pop: a wash of the accent across the top-left corner, which is
+   where the eye already is when the pointer arrives. Painted over the whole
+   card and ignored by the pointer, so nothing underneath changes behaviour. */
+.event-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    140deg,
+    color-mix(in oklab, var(--accent) 12%, transparent),
+    transparent 60%
+  );
+  transition: opacity 220ms ease;
+}
+
+.event-tile:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+  box-shadow:
+    0 12px 26px -10px hsl(var(--shadow-color) / 0.28),
+    0 0 0 1px color-mix(in oklab, var(--accent) 20%, transparent);
+}
+.event-tile:hover::after {
+  opacity: 1;
+}
+
+/* Keyboard parity: a tile reached by Tab gets the same emphasis as one under
+   the pointer, so the two ways of moving through the calendar look alike. */
+.event-tile:focus-within {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+}
+
+.event-tile:active {
+  transform: translateY(-1px) scale(0.995);
+  box-shadow: 0 4px 10px -6px hsl(var(--shadow-color) / 0.3);
+}
+
+.event-tile__art {
+  transition:
+    transform 420ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    filter 220ms ease;
+}
+.event-tile:hover .event-tile__art {
+  transform: scale(1.05);
+  filter: saturate(1.15) brightness(1.03);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

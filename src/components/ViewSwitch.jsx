@@ -10,15 +10,17 @@ export default function ViewSwitch({ view, onChange }) {
     { key: 'work', label: 'My work' },
   ]
   return (
-    <div className="inline-flex overflow-hidden rounded-md border border-border">
+    <div className="inline-flex h-8 overflow-hidden rounded-lg border border-border bg-surface">
       {options.map((o) => (
         <button
           key={o.key}
           type="button"
           onClick={() => onChange(o.key)}
           aria-current={view === o.key ? 'page' : undefined}
-          className={`focus-ring whitespace-nowrap px-3 py-1.5 text-xs font-semibold transition ${
-            view === o.key ? 'bg-accent text-accent-ink' : 'text-ink-soft hover:text-ink'
+          className={`focus-ring whitespace-nowrap px-3 text-xs font-semibold transition duration-200 ${
+            view === o.key
+              ? 'bg-accent text-accent-ink'
+              : 'text-ink-soft hover:bg-paper hover:text-ink'
           }`}
         >
           {o.label}

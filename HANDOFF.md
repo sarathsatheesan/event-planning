@@ -484,6 +484,16 @@ addresses are in the logs — search `Reminder send failed`.
    `/eventOverrides/<id>`, turn on Authenticated and set **both** `email` and
    `email_verified` — the rule reads `email_verified`, so leaving it unticked
    denies everything for the wrong reason and looks like a broken rule.
+24. **The calendar's uniform card height is a markup discipline, not a CSS
+   trick.** Every slot in an event tile has a fixed line budget — two lines of
+   title, one of date, one of venue, two of note — set with `line-clamp-N` and
+   a matching `min-h`. That is what makes fifteen cards of wildly uneven
+   content the same height; the grid only stretches cards within a row, so
+   without it each row found its own height and the page read as three
+   different kinds of thing. Adding a line to a tile means adding it to the
+   budget, or the uniformity quietly goes. `src/index.css` owns the hover and
+   press states under `.event-tile`, in one place rather than a dozen utility
+   classes, because three surfaces move together and they have to agree.
 23. **A status can be derived from a field nothing could edit.**
    `deriveStatus` takes the finish line from `endDate ?? date`, and for months
    only `date` was editable — the end was rendered as plain text. Push a

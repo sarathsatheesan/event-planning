@@ -51,7 +51,7 @@ export default function Dashboard({
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">
             India Cultural Center of Utah
           </p>
-          <h1 className="font-display text-4xl font-bold leading-none sm:text-5xl">
+          <h1 className="font-display text-4xl font-bold leading-[0.95] tracking-tight sm:text-5xl">
             Annual Event Operations Hub
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-soft">
@@ -65,7 +65,7 @@ export default function Dashboard({
             <button
               type="button"
               onClick={onNewEvent}
-              className="focus-ring rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink transition"
+              className="focus-ring rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink shadow-sm transition hover:brightness-110 active:scale-[0.98]"
             >
               New event
             </button>
@@ -81,7 +81,7 @@ export default function Dashboard({
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 className="font-display text-xl font-bold">Event Calendar</h2>
+        <h2 className="font-display text-xl font-bold tracking-tight">Event Calendar</h2>
         <EventFilters
           events={events}
           filters={filters}
@@ -97,7 +97,7 @@ export default function Dashboard({
       </div>
 
       {sorted.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-6 py-14 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
           <p className="font-display text-lg font-bold text-ink">No events match</p>
           <p className="max-w-sm text-sm text-ink-soft">
             {events.length} event{events.length === 1 ? '' : 's'} on the calendar, none of them
@@ -112,39 +112,53 @@ export default function Dashboard({
           </button>
         </div>
       ) : (
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Every tile is the same height because every slot inside it has a
+            fixed line budget — two lines of title, one of date, one of venue,
+            two of note — rather than because the row stretches them to match.
+            Fifteen events, some carrying a venue, a note and a lead and some
+            only a name and a date, used to produce three different card
+            heights down the page, which reads as three different kinds of
+            thing. */}
         {sorted.map((event) => {
           const pct = readiness(event)
           const tone = statusTone[event.status]
           return (
-            <li key={event.id}>
-              <div className="focus-ring group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                <EventArt theme={event.theme} className="h-16 w-full shrink-0" />
+            <li key={event.id} className="h-full">
+              <article className="event-tile group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+                <EventArt theme={event.theme} className="event-tile__art h-14 w-full shrink-0" />
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event.id)}
-                  className="focus-ring flex flex-1 flex-col px-5 pt-4 text-left"
+                  className="focus-ring relative z-10 flex flex-1 flex-col px-5 pb-4 pt-4 text-left"
                 >
-                  <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="mb-3 flex h-12 items-start justify-between gap-3">
                     <StatusPill label={event.status} tone={tone} pulse={tone === 'live'} />
-                    <ReadinessGauge percent={pct} size={52} stroke={5} />
+                    <ReadinessGauge percent={pct} size={46} stroke={4} />
                   </div>
-                  <h3 className="font-display text-lg font-bold leading-tight group-hover:text-accent">
+                  <h3 className="line-clamp-2 min-h-[3.1rem] font-display text-xl font-bold leading-tight tracking-tight transition-colors duration-200 group-hover:text-accent">
                     {event.name}
                   </h3>
-                  <p className="mt-1 text-sm text-ink-soft">{event.venue}</p>
-                  <div className="mt-3 flex items-center gap-2 font-mono text-xs">
-                    <span className="tabular">
+                  <div className="mt-2 flex items-center gap-2 font-mono text-xs">
+                    <span className="tabular text-ink-soft">
                       {formatDateRange(event.date, event.endDate)}
                       {event.startTime && `, ${formatTime(event.startTime)}`}
                     </span>
                     <span className="text-border">&middot;</span>
                     <TMinusLabel dateStr={event.date} today={today} />
                   </div>
-                  <p className="mt-3 text-sm leading-snug text-ink-soft">{event.heroNote}</p>
+                  {/* A missing venue used to render as nothing, which moved
+                      everything below it up by a line. The placeholder keeps
+                      the rhythm and says the same thing the event page says. */}
+                  <p className="mt-2 truncate text-sm text-ink-soft">
+                    {event.venue || <span className="italic opacity-70">Venue to be confirmed</span>}
+                  </p>
+                  <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm leading-snug text-ink-soft">
+                    {event.heroNote}
+                  </p>
                 </button>
-                <div className="mt-4 flex items-center justify-between border-t border-border-soft px-5 py-3">
-                  <span className="text-xs text-ink-soft">
+                <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-soft bg-paper/50 px-5 py-2.5">
+                  <span className="truncate text-xs text-ink-soft">
                     {event.lead ? (
                       <>
                         Lead: <span className="font-medium text-ink">{event.lead}</span>
@@ -153,11 +167,11 @@ export default function Dashboard({
                       <span className="italic">No lead assigned</span>
                     )}
                   </span>
-                  <span className="rounded border border-border-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                  <span className="shrink-0 rounded-md border border-border-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-soft">
                     {event.org}
                   </span>
                 </div>
-              </div>
+              </article>
             </li>
           )
         })}
@@ -169,10 +183,10 @@ export default function Dashboard({
 
 function SummaryStat({ label, value, tone }) {
   return (
-    <div className="rounded-lg border border-border bg-surface px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{label}</p>
+    <div className="rounded-xl border border-border bg-surface px-4 py-3.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-soft">{label}</p>
       <p
-        className="font-display tabular text-2xl font-bold"
+        className="font-display tabular mt-0.5 text-3xl font-bold leading-none tracking-tight"
         style={tone === 'live' ? { color: 'var(--live)' } : undefined}
       >
         {value}

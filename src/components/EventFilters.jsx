@@ -14,8 +14,11 @@ import { ALL, activeCount, yearsIn, orgsIn, committeesIn, statusesIn } from '../
  * is a dead end, and offering a status nobody is in wastes a line.
  */
 
+// One height and one radius for every control on this row. They used to be
+// sized by their padding, so a select, a search box and a button group each
+// ended up a different height and the row read as three separate things.
 const CONTROL =
-  'focus-ring rounded-md border border-border bg-surface px-2 py-1 text-xs font-semibold text-ink'
+  'focus-ring h-8 rounded-lg border border-border bg-surface px-2.5 text-xs font-semibold text-ink transition hover:border-ink-soft/40'
 
 export default function EventFilters({
   events,
@@ -79,15 +82,17 @@ export default function EventFilters({
 
         {/* Org is the headline of this screen and has two values, so it gets
             buttons rather than a select — one tap instead of three. */}
-        <div className="flex items-center rounded-md border border-border bg-surface p-0.5">
+        <div className="flex h-8 items-center rounded-lg border border-border bg-surface p-1">
           {[ALL, ...orgs].map((value) => (
             <button
               key={value}
               type="button"
               onClick={() => set({ org: value })}
               aria-pressed={filters.org === value}
-              className={`focus-ring rounded px-2 py-0.5 text-xs font-semibold transition ${
-                filters.org === value ? 'bg-accent text-accent-ink' : 'text-ink-soft hover:text-ink'
+              className={`focus-ring rounded-md px-2.5 py-0.5 text-xs font-semibold transition duration-200 ${
+                filters.org === value
+                  ? 'bg-accent text-accent-ink shadow-sm'
+                  : 'text-ink-soft hover:bg-paper hover:text-ink'
               }`}
             >
               {value === ALL ? 'All orgs' : value}
@@ -148,7 +153,7 @@ export default function EventFilters({
           <button
             type="button"
             onClick={() => onChange({ q: '', year: ALL, org: ALL, committee: ALL, status: ALL })}
-            className="focus-ring self-start rounded-md px-2 py-1 text-xs font-semibold text-ink-soft underline-offset-2 transition hover:text-ink hover:underline sm:self-auto"
+            className="focus-ring h-8 self-start rounded-lg px-2 text-xs font-semibold text-ink-soft underline-offset-2 transition hover:text-ink hover:underline sm:self-auto"
           >
             Clear
           </button>

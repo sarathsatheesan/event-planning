@@ -230,7 +230,7 @@ export default function MyWork({
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-soft">
             India Cultural Center of Utah
           </p>
-          <h1 className="font-display text-3xl font-bold leading-none sm:text-4xl">My work</h1>
+          <h1 className="font-display text-3xl font-bold leading-[0.95] tracking-tight sm:text-4xl">My work</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-ink-soft">
             Milestones across every upcoming event, by owner and due date.
           </p>
@@ -358,12 +358,12 @@ export default function MyWork({
                   {items.filter((t) => t.status !== 'Done').length === 1 ? '' : 's'}
                 </span>
               </div>
-              <ul className="overflow-hidden rounded-xl border border-border">
+              <ul className="overflow-hidden rounded-xl border border-border shadow-sm">
                 {items.map((row, i) => (
                   <li
                     key={row.key}
-                    className={`flex flex-col gap-1 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 ${
-                      row.status === 'Done' ? 'bg-paper' : 'bg-surface'
+                    className={`flex flex-col gap-1 px-3 py-2.5 transition-colors duration-150 sm:flex-row sm:items-center sm:gap-3 ${
+                      row.status === 'Done' ? 'bg-paper' : 'bg-surface hover:bg-paper/60'
                     } ${i !== items.length - 1 ? 'border-b border-border-soft' : ''}`}
                   >
                     <span className="tabular w-28 shrink-0 font-mono text-xs text-ink-soft">

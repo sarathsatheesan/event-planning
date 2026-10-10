@@ -9,7 +9,7 @@ const toneClasses = {
 export default function StatusPill({ label, tone = 'neutral', pulse = false }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${toneClasses[tone]}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.07em] ${toneClasses[tone]}`}
     >
       {pulse && (
         <span className="relative flex h-1.5 w-1.5">
