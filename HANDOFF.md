@@ -214,6 +214,22 @@ accident:
   `PeopleField` replaced `PersonField` wherever work can be shared.
   `PersonField` deliberately stays for the event lead, a sponsor's Temple POC
   and a run-of-show slot: those are one person by nature.
+- **Who may reach an event** — `participants`, an array of lower-cased
+  addresses on each `eventOverrides` document, written by `participantsOf()`
+  in `src/data/assignees.js` and recomputed in `handleEventChange` on every
+  save. It gathers the lead, every milestone and run-of-show and follow-up
+  owner, and every sponsor's Temple POC. It exists for the committee-scoped
+  read that Phase 2 brings: that client asks for its own committees' events,
+  so a milestone handed to somebody from another committee would otherwise be
+  invisible to them — the event is not theirs, the query never returns it, and
+  a personal task you cannot open is worse than no task.
+  **Addresses only**, because an address is the only thing a security rule can
+  compare against the signed-in user. Which has a consequence worth knowing:
+  the seed carries 141 assignee **names** and no addresses at all, so those
+  contribute nothing. `participants` fills up as milestones are reassigned
+  from the roster picker — the same act that makes the weekly reminder reach
+  anyone. The admin button on **My work** seeds the field on records that
+  predate it; after that it maintains itself.
 - **Wrap-up follow-ups** — `event.retro.actions[]`, shape
   `{id, action, assignee, assigneeEmail, due, status}`. Absent on every wrap-up
   written before 6 Oct 2026; read it as `retro.actions ?? []`. The digest and

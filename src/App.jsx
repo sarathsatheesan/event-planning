@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { nextStatus, events as seedEvents, deriveStatus, DEFAULT_COMMITTEE } from './data/events.js'
+import { participantsOf } from './data/assignees.js'
 import { loadOverrides, saveOverrides, applyOverrides } from './data/storage.js'
 import { isFirebaseConfigured } from './lib/firebaseConfig.js'
 import {
@@ -220,7 +221,11 @@ export default function App() {
    * purely to hold a committee would be inventing work and inventing rows.
    */
   const untaggedIds = useMemo(
-    () => Object.keys(visibleOverrides).filter((id) => visibleOverrides[id] && !visibleOverrides[id].committee),
+    () =>
+      Object.keys(visibleOverrides).filter((id) => {
+        const rec = visibleOverrides[id]
+        return rec && (!rec.committee || !Array.isArray(rec.participants))
+      }),
     [visibleOverrides]
   )
 
@@ -238,9 +243,11 @@ export default function App() {
     if (!ids.length) return
     for (const id of ids) {
       const shown = events.find((e) => e.id === id)
+      // handleEventChange recomputes participants itself, so passing the
+      // committee is enough to bring both fields up to date.
       handleEventChange(id, { committee: shown?.committee ?? DEFAULT_COMMITTEE })
     }
-    showToast(`Tagged ${ids.length} event${ids.length === 1 ? '' : 's'} with the committee already shown.`)
+    showToast(`Updated ${ids.length} event record${ids.length === 1 ? '' : 's'}.`)
   }
 
   const selectedEvent = events.find((e) => e.id === selectedId) ?? null
@@ -253,7 +260,8 @@ export default function App() {
   function handleCreateEvent({ name, date, sourceId, org, committee }) {
     const source = sourceId ? events.find((e) => e.id === sourceId) : null
     const id = newEventId()
-    const record = buildEvent({ name, date, source, org, committee })
+    const built = buildEvent({ name, date, source, org, committee })
+    const record = { ...built, participants: participantsOf(built) }
     setOverrides((prev) => {
       if (cloud) queueWrite(id, record)
       return { ...prev, [id]: record }
@@ -298,8 +306,14 @@ export default function App() {
       }
     }
     setOverrides((prev) => {
-      const next = { ...prev, [id]: { ...(prev[id] ?? {}), ...patch } }
-      if (cloud) queueWrite(id, next[id])
+      const merged = { ...(prev[id] ?? {}), ...patch }
+      // Recomputed from the event as it will read, not from the patch: most
+      // overrides are partial, so the checklist deciding who is on this event
+      // usually lives in the seed rather than in the record being written.
+      const shown = events.find((e) => e.id === id)
+      const record = { ...merged, participants: participantsOf({ ...shown, ...merged }) }
+      const next = { ...prev, [id]: record }
+      if (cloud) queueWrite(id, record)
       return next
     })
   }

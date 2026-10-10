@@ -239,10 +239,10 @@ export default function MyWork({
             <button
               type="button"
               onClick={onTagUntagged}
-              title="Writes the committee each event already shows, so a committee filter can find them"
+              title="Writes the committee each event already shows, and the list of people with work on it — what a committee-scoped view needs to find them"
               className="focus-ring rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-ink-soft transition hover:border-accent hover:text-accent"
             >
-              Tag {untaggedCount} untagged event{untaggedCount === 1 ? '' : 's'}
+              Update {untaggedCount} event record{untaggedCount === 1 ? '' : 's'}
             </button>
           )}
           {onPreviewReminders && (

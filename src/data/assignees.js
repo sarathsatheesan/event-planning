@@ -38,6 +38,38 @@ export function assigneeNames(item) {
 }
 
 /**
+ * Every committee address with something against them on this event.
+ *
+ * Written onto the event's own record so a committee-scoped read can find it.
+ * The scoped client asks for its own committees' events; without this, a
+ * milestone handed to somebody from another committee would be invisible to
+ * them — the event is not theirs, so the query would never return it, and a
+ * personal task they cannot open is worse than no task at all.
+ *
+ * Addresses only, lower-cased, because an address is the only thing a security
+ * rule can compare against the signed-in user. A name typed into a box with no
+ * address behind it cannot grant anybody access, which is the same reason the
+ * weekly digest cannot write to one.
+ */
+export function participantsOf(event) {
+  const found = new Set()
+  const add = (email) => {
+    const clean = String(email ?? '').trim().toLowerCase()
+    if (clean) found.add(clean)
+  }
+
+  add(event?.leadEmail)
+  for (const item of event?.checklist ?? []) for (const a of assigneesOf(item)) add(a.email)
+  for (const item of event?.runOfShow ?? []) add(item?.ownerEmail)
+  for (const item of event?.retro?.actions ?? []) for (const a of assigneesOf(item)) add(a.email)
+  // Approaching a sponsor is work on this event like any other, and it is done
+  // from this event's Sponsors tab.
+  for (const s of event?.sponsors ?? []) add(s?.templePocEmail)
+
+  return [...found].sort()
+}
+
+/**
  * The patch to write when an item's owners change.
  *
  * Always returns all three fields, so clearing the last owner clears the
