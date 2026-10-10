@@ -130,20 +130,30 @@ export default function Dashboard({
           return (
             <li key={event.id} className="h-full">
               <article className="event-tile group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface">
-                <EventArt theme={event.theme} className="event-tile__art h-12 w-full shrink-0" />
+                {/* The readiness ring sits on the artwork rather than on a row
+                    of its own. It was costing the card a whole line of height
+                    for one number, and the gap it left between the status, the
+                    title and the date was the most visible thing on the
+                    screen. Overlapping the edge also ties the two halves of
+                    the card together, which the flat strip did not. */}
+                <div className="relative shrink-0">
+                  <EventArt theme={event.theme} className="event-tile__art h-12 w-full" />
+                  <span className="absolute -bottom-4 right-4 z-10 rounded-full border border-border bg-surface p-0.5 shadow-sm">
+                    <ReadinessGauge percent={pct} size={38} stroke={4} />
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => onSelectEvent(event.id)}
-                  className="focus-ring relative z-10 flex flex-1 flex-col px-5 pb-3.5 pt-3.5 text-left"
+                  className="focus-ring relative z-10 flex flex-1 flex-col px-5 pb-3 pt-3 text-left"
                 >
-                  <div className="mb-2.5 flex h-11 items-start justify-between gap-3">
+                  <span className="pr-14">
                     <StatusPill label={event.status} tone={tone} pulse={tone === 'live'} />
-                    <ReadinessGauge percent={pct} size={42} stroke={4} />
-                  </div>
-                  <h3 className="line-clamp-2 min-h-[3.1rem] font-display text-xl font-bold leading-tight tracking-tight transition-colors duration-200 group-hover:text-accent">
+                  </span>
+                  <h3 className="mt-2 line-clamp-2 min-h-[2.7rem] font-display text-lg font-bold leading-[1.2] tracking-tight transition-colors duration-200 group-hover:text-accent">
                     {event.name}
                   </h3>
-                  <div className="mt-2 flex items-center gap-2 font-mono text-xs">
+                  <div className="mt-1.5 flex items-center gap-2 font-mono text-xs">
                     <span className="tabular text-ink-soft">
                       {formatDateRange(event.date, event.endDate)}
                       {event.startTime && `, ${formatTime(event.startTime)}`}
@@ -154,11 +164,11 @@ export default function Dashboard({
                   {/* A missing venue used to render as nothing, which moved
                       everything below it up by a line. The placeholder keeps
                       the rhythm and says the same thing the event page says. */}
-                  <p className="mt-2 truncate text-sm text-ink-soft">
+                  <p className="mt-1.5 truncate text-sm text-ink-soft">
                     {event.venue || <span className="italic opacity-70">Venue to be confirmed</span>}
                   </p>
                 </button>
-                <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-soft bg-paper/50 px-5 py-2.5">
+                <div className="relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border-soft bg-paper/50 px-5 py-2">
                   <span className="truncate text-xs text-ink-soft">
                     {event.lead ? (
                       <>

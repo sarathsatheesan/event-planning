@@ -64,7 +64,6 @@ const shell = {
   budget: null,
   spent: null,
   attendanceEst: null,
-  heroNote: null,
   categories: TEMPLATE_CATEGORIES,
   runOfShow: [],
   vendors: [],
@@ -153,8 +152,6 @@ export const events = [
     name: 'Independence Day Celebrations',
     date: '2026-08-15',
     venue: 'Venue to be confirmed',
-    heroNote:
-      'Morning flag hoisting, national anthem, and a timed community run with medals and prize distribution.',
     categories: ['Registration', 'Awards', 'Ceremony', 'Logistics'],
     // DRAFT ANCHORS — the source list had no lead times, so each T-anchor is
     // inferred from the nature of the task. Adjust to match how early you work.
@@ -208,8 +205,6 @@ export const events = [
     date: '2027-06-06',
     startTime: '10:30',
     venue: 'India Cultural Center campus',
-    heroNote:
-      'The year\'s largest community event — food stalls, business vendors, cultural programme, rides and games across the whole campus.',
     categories: [
       'Permit',
       'Food Stall',

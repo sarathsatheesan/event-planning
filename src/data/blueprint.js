@@ -52,7 +52,6 @@ export function buildEvent({ name, date, source, org, committee }) {
     budget: null,
     spent: null,
     attendanceEst: null,
-    heroNote: null,
     categories: TEMPLATE_CATEGORIES,
     checklist: buildTemplateChecklist(date),
     runOfShow: [],
@@ -82,7 +81,6 @@ export function buildEvent({ name, date, source, org, committee }) {
     leadEmail: source.leadEmail ?? null,
     budget: source.budget ?? null,
     attendanceEst: source.attendanceEst ?? null,
-    heroNote: source.heroNote ?? null,
     categories: source.categories ?? base.categories,
     checklist: realignDueDates(
       (source.checklist ?? []).map((task) => ({ ...task, status: 'Not Started' })),
