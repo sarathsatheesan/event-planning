@@ -25,6 +25,15 @@ otherwise, and each of them is read by someone who was not in the room:
    `claude/eventops-handoff.md`, which is this file's content. Overwrite it
    with the updated HANDOFF.md rather than hand-editing a second copy; two
    drifting versions are worse than one stale one.
+   **Pass `local_path` as an absolute path, and read the doc back.** The
+   `Projects` tool resolves a relative `local_path` against the session's
+   *primary* working directory, not whatever directory the shell is in — and
+   a stale `eventops-handoff.md` from an earlier session lives there. On
+   12 Oct 2026 two consecutive writes both returned `replaced: true` having
+   silently uploaded that two-day-old file; nothing in the result said so,
+   and `project_search` kept answering from the old copy. Copy the freshly
+   staged HANDOFF.md to an absolute path, write **that**, then `project_read`
+   it back and check the date line. The write's own success is not evidence.
 3. **The status dashboard** — `eNoVo_Feature_Dashboard/index.html`, the
    `"EventOps"` entry in the `PRODUCTS` registry. Add or flip the feature rows
    (`features`), add a dated `calendar` entry for anything a reader would call
