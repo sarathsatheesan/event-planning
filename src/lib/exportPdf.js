@@ -1,5 +1,6 @@
 import { formatTime, offsetFromStart } from './records.js'
 import { formatDateRange } from '../data/events.js'
+import { EXPORT_COLUMNS, calendarFileName } from './calendarExport.js'
 import { assigneeNames } from '../data/assignees.js'
 import { rosterSummary } from './artists.js'
 
@@ -12,6 +13,11 @@ export const EXPORT_SECTIONS = [
   { key: 'vendors', label: 'Vendor & Resource Directory' },
   { key: 'wrapup', label: 'Post-Event Wrap-Up' },
 ]
+
+// One spelling of the organisation's name across both exports. It read
+// INDIA CULTURAL CENTER OF UTAH until Oct 2026, which outlived the rebrand by
+// two days because nothing on screen shows it — only a downloaded PDF does.
+const ORG_LINE = 'SRI GANESHA HINDU TEMPLE OF UTAH'
 
 const INK = [18, 21, 28]
 const SOFT = [110, 118, 132]
@@ -100,7 +106,7 @@ export async function exportEventPdf(event, selectedKeys) {
 
   // ---- Cover block on the first page ----
   doc.setFont('helvetica', 'bold').setFontSize(8).setTextColor(...ACCENT)
-  doc.text('INDIA CULTURAL CENTER OF UTAH', 40, 50)
+  doc.text(ORG_LINE, 40, 50)
   doc.setFont('helvetica', 'bold').setFontSize(20).setTextColor(...INK)
   doc.text(doc.splitTextToSize(event.name, pageWidth - 80), 40, 74)
 
@@ -330,4 +336,79 @@ export async function exportEventPdf(event, selectedKeys) {
   }
 
   doc.save(`${slug(event.name)}-${event.date}.pdf`)
+}
+
+/**
+ * The calendar as one table — every event that is showing, with who leads it.
+ *
+ * Landscape, because nine columns on A4 portrait would squeeze the event name
+ * to two words. Columns are proportional to the Excel widths rather than a
+ * second set of numbers, so widening a column in one place widens it in both.
+ */
+export async function exportCalendarPdf(rows, { scope = '', filters = {}, committees = [] } = {}) {
+  const [{ jsPDF }, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+  const autoTable = autoTableModule.default ?? autoTableModule.autoTable
+
+  const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+
+  doc.setFont('helvetica', 'bold').setFontSize(8).setTextColor(...ACCENT)
+  doc.text(ORG_LINE, 40, 46)
+  doc.setFont('helvetica', 'bold').setFontSize(18).setTextColor(...INK)
+  doc.text('Event Calendar', 40, 70)
+
+  doc.setFont('helvetica', 'normal').setFontSize(9.5).setTextColor(...SOFT)
+  const count = `${rows.length} event${rows.length === 1 ? '' : 's'}`
+  doc.text([scope, count].filter(Boolean).join(' · '), 40, 88)
+
+  // Two things the page wants and the spreadsheet does not. A blank cell
+  // reads as an oversight in print, where in a spreadsheet it reads as a
+  // blank — so the dash comes back. And 2027-02-28 is the right thing to hand
+  // a sorting tool and the wrong thing to hand a committee, so dates are
+  // spelled out here and left ISO in the CSV and the workbook.
+  const printDate = (iso) =>
+    new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+
+  const body = rows.map((row) =>
+    EXPORT_COLUMNS.map((c) => {
+      const value = row[c.key]
+      if (value === '' || value == null) return '\u2014'
+      if (c.type === 'date') return printDate(value)
+      return c.key === 'readiness' ? `${value}%` : String(value)
+    })
+  )
+
+  const total = EXPORT_COLUMNS.reduce((sum, c) => sum + c.width, 0)
+  const usable = pageWidth - 80
+  const columnStyles = Object.fromEntries(
+    EXPORT_COLUMNS.map((c, i) => [
+      i,
+      {
+        cellWidth: (c.width / total) * usable,
+        halign: c.type === 'number' ? 'right' : 'left',
+      },
+    ])
+  )
+
+  table(doc, autoTable, EXPORT_COLUMNS.map((c) => c.label), body, 104, columnStyles)
+
+  const generated = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+  const pages = doc.getNumberOfPages()
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i)
+    doc.setFont('helvetica', 'normal').setFontSize(7.5).setTextColor(...SOFT)
+    doc.text(`Event calendar — generated ${generated}`, 40, doc.internal.pageSize.getHeight() - 24)
+    doc.text(`Page ${i} of ${pages}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 24, {
+      align: 'right',
+    })
+  }
+
+  doc.save(calendarFileName(filters, 'pdf', committees))
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { statusTone, readiness, formatDateRange, ORGS, COMMITTEES } from '../data/events.js'
 import { formatTime } from '../lib/records.js'
 import StatusPill from './StatusPill.jsx'
@@ -6,6 +7,7 @@ import EventArt from './EventArt.jsx'
 import ViewSwitch from './ViewSwitch.jsx'
 import { useEditable } from '../lib/editing.js'
 import EventFilters from './EventFilters.jsx'
+import ExportCalendarDialog from './ExportCalendarDialog.jsx'
 import { EMPTY_FILTERS, filterEvents, activeCount } from '../lib/filters.js'
 
 function daysUntil(dateStr, today) {
@@ -32,6 +34,9 @@ export default function Dashboard({
   onFiltersChange,
 }) {
   const editable = useEditable()
+  // Local to the calendar rather than hoisted into App: the only thing it
+  // needs is the list this screen has already filtered and sorted.
+  const [exporting, setExporting] = useState(false)
   // The summary follows the filter. Narrowing to the temple and still being
   // told the ICC's average readiness would answer a question nobody asked.
   const shown = filterEvents(events, filters)
@@ -61,6 +66,15 @@ export default function Dashboard({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ViewSwitch view={view} onChange={onViewChange} />
+          {/* Not gated on edit rights: it downloads what the page is already
+              showing, and a committee member reading a printout is the point. */}
+          <button
+            type="button"
+            onClick={() => setExporting(true)}
+            className="focus-ring rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink-soft shadow-sm transition hover:border-ink-soft/40 hover:text-ink active:scale-[0.98]"
+          >
+            Export
+          </button>
           {editable && (
             <button
               type="button"
@@ -187,6 +201,15 @@ export default function Dashboard({
           )
         })}
       </ul>
+      )}
+
+      {exporting && (
+        <ExportCalendarDialog
+          events={sorted}
+          filters={filters}
+          committees={COMMITTEES}
+          onClose={() => setExporting(false)}
+        />
       )}
     </div>
   )

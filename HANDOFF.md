@@ -1,6 +1,6 @@
 # EventOps — handoff
 
-India Cultural Center of Utah · last updated 10 October 2026 · `main`
+Sri Ganesha Hindu Temple of Utah · last updated 12 October 2026 · `main`
 
 <!-- No commit hash here on purpose: this file is edited in the same commit it
      would name, so any hash written above is wrong the moment it is committed.
@@ -109,6 +109,18 @@ accident:
   source. An unknown id falls back to `icc` rather than producing an event
   with no checklist. Adding a third shape — sponsorship, a general body
   meeting — is one entry in that list and nothing else.
+- **The calendar export** — `src/lib/calendarExport.js` turns the events the
+  calendar is *currently showing* into rows and then into bytes: CSV, a real
+  `.xlsx`, or (via `exportCalendarPdf` in `exportPdf.js`) a landscape PDF.
+  `EXPORT_COLUMNS` is the single definition of what the columns are and how
+  wide they sit — Excel reads `width` directly, the PDF scales the same
+  numbers to the page, so a column widened once is widened in both. There is
+  deliberately **no year picker in the dialog**: the filters above the
+  calendar already say year, org, committee, status and name, and a second
+  set of controls would be one more thing to keep in agreement with them.
+  The consequence worth knowing: the year filter is single-select, so
+  "several years" means clearing it to *All years* and not something the
+  export can do on its own.
 - **Events** — `src/data/events.js` is immutable seed. Edits layer on top as
   `eventOverrides/{eventId}` in Firestore. An override whose id is *not* in the
   seed and that carries a name and date **is** a user-created event; see
@@ -600,6 +612,48 @@ addresses are in the logs — search `Reminder send failed`.
    root has already turned a literal string into a CSS utility once (gotcha
    below on `@container`).
 
+28. **The `.xlsx` writer is 120 hand-written lines, on purpose.** SheetJS is
+   no longer published to npm at a maintained version and ExcelJS is about a
+   megabyte to turn fifteen rows into a table, so `calendarExport.js` writes
+   the workbook itself: five small XML parts in a zip whose entries are all
+   **stored**, not deflated, which is why no compression library is needed.
+   Four details that are each a silent corruption if wrong, and none of which
+   Excel explains when it refuses the file:
+
+   - Excel's date epoch is **1899-12-30**, so a serial is
+     `Date.UTC(y, m-1, d) / 86400000 + 25569`. Built from the date *parts*,
+     never from a local `Date`, or an evening in Utah stores as the next day.
+   - XML 1.0 cannot carry a control character, and Excel rejects the whole
+     workbook rather than skipping the cell. They are stripped on the way in
+     (a pasted venue name is the likely source). oxlint flags that regex as
+     `no-control-regex`; the suppression comment above it explains why.
+   - `<row>` must come in order and the cell `r=` references must agree with
+     it. Blank cells are omitted entirely, which is allowed and is how a
+     missing venue stays missing rather than becoming an empty string.
+   - `autoFilter` goes **after** `sheetData`, `cols` **before** it. The
+     schema cares; Excel's error message does not say so.
+
+   Do not assert on the bytes. `calendarExport.test.mjs` writes each workbook
+   and reads it back with `read-excel-file`, which the app already depends on
+   for menu imports — that is as close to "Excel opened it" as Node gets, and
+   it is what caught the epoch being 25568 the first time.
+
+29. **A CSV without a byte order mark is mojibake in Excel on Windows.**
+   Symptom: “Diwali” opens as `â€œDiwaliâ€`. `toCsv` writes `\uFEFF` first and
+   ends lines `\r\n`, which is what every spreadsheet writes and what some
+   older Excel builds insist on reading.
+
+30. **The same data wants different formatting in print and in a sheet.** A
+   blank cell reads as an oversight on a printed page and as a blank in a
+   spreadsheet, so the PDF substitutes an em dash and the CSV and workbook do
+   not. `2027-02-28` is the right thing to hand a sorting tool and the wrong
+   thing to hand a committee, so the PDF spells dates out and the other two
+   stay ISO. Both differences live in `exportCalendarPdf`, not in the rows —
+   `buildRows` stays the one honest version.
+   A related trap: at an Excel width of 12 the spelled-out “May 10, 2027”
+   wrapped to a second line in the PDF and made one row taller than the rest.
+   The date columns are 14 for that reason alone.
+
 ## How this codebase gets tested
 
 No test framework. Two approaches, both worth continuing:
@@ -609,9 +663,11 @@ No test framework. Two approaches, both worth continuing:
   filters, the org backfill, the sponsor and business-vendor seeds),
   `src/lib/menu.test.mjs` (the duplicate-dish matcher, against the committee's
   real 82-item menu), `src/lib/menuImport.test.mjs` (the menu parser against
-  realistically messy input) and `src/data/template.test.mjs` (both blueprints
+  realistically messy input) `src/data/template.test.mjs` (both blueprints
   well formed, the seed's default argument guarded, and `buildEvent` carrying
-  the right one). In `functions/`, `npm test` runs
+  the right one) and `src/lib/calendarExport.test.mjs` (the rows, the CSV
+  quoting, and every workbook written and then **read back** with
+  read-excel-file rather than asserted on as bytes). In `functions/`, `npm test` runs
   `digest.test.mjs` against the real calendar at several dates and
   `mailer.test.mjs` for message shape and that the password cannot leak into
   anything loggable. **Both** are worth running; the root one does not include
@@ -685,6 +741,15 @@ Full list in ROADMAP.md. The ones most likely to matter next:
   the floor volunteers it was designed for. Decision deferred deliberately.
 - **No offline support on the day-of view**, which is the one hour the app must
   not fail.
+- **The calendar export has no column picker.** Nine columns, fixed:
+  `EXPORT_COLUMNS` in `src/lib/calendarExport.js`. Adding or reordering one is
+  a line in that array and nothing else — the CSV, the workbook and the PDF
+  all build from it. Nobody has asked for a picker, and a dialog that already
+  says what it will export is a better answer than one that asks.
+- **Several years means clearing the year filter.** The calendar's year
+  control is a single select, so an export covering 2026 *and* 2027 but not
+  2028 is not expressible. If that is ever wanted, the filter is where it
+  belongs, not the export dialog.
 - **Three tabs are missing from the PDF export.** The picker offers artists and
   the four stages only, so a committee handout leaves out the sponsor pipeline,
   the food stalls and their menus, and the business booths — which between them
